@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 검색 인용 구조와 공식몰 GEO 설계 방향 | 더프롬 기획팀</title>
+<meta name="description" content="풀무원 두부 GEO 스터디 3건을 1차 출처로 재검증해 통합한 보고서. 공식몰 설계 구조, 추천과 구매처의 분리, 엔진별 인용 구조, 인사이트, Samsung UK 사이트 GEO 진단.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#121212; --surface:#181818; --surface-2:#1f1f1f; --card:#252525; --card-2:#272727;
+  --text:#ffffff; --text-2:#b3b3b3; --text-3:#cbcbcb;
+  --line:rgba(255,255,255,.08); --border:#4d4d4d; --border-2:#7c7c7c;
+  --green:#1ed760; --green-2:#1db954;
+  --red:#f3727f; --orange:#ffa42b; --blue:#539df5;
+  --shadow-1:rgba(0,0,0,.3) 0 8px 8px; --shadow-2:rgba(0,0,0,.5) 0 8px 24px;
+  --font:"Pretendard Variable",Pretendard,"Helvetica Neue",helvetica,arial,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  --side:284px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 72px);scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16.5px;line-height:1.7;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
+a{color:var(--text);text-decoration:underline;text-decoration-color:var(--border-2);text-underline-offset:3px}
+a:hover{text-decoration-color:var(--text)}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+
+/* ---------- layout ---------- */
+.app{display:grid;grid-template-columns:var(--side) 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;padding:20px 12px 96px;background:#000;overflow-y:auto}
+.side-card{background:var(--surface);border-radius:8px;padding:16px 8px}
+.logo{display:flex;align-items:center;gap:10px;padding:4px 12px 16px;font-weight:700;font-size:14px}
+.logo i{width:22px;height:22px;border-radius:50%;background:var(--green);display:inline-block;position:relative}
+.logo i::after{content:"";position:absolute;left:5px;right:5px;top:9px;height:2px;background:#000;border-radius:2px;box-shadow:0 -4px 0 #000,0 4px 0 #000;transform:rotate(-8deg)}
+.toc{list-style:none;margin:0;padding:0}
+.toc a{display:flex;gap:12px;align-items:baseline;padding:8px 12px;border-radius:6px;color:var(--text-2);text-decoration:none;font-size:15px;font-weight:400;line-height:1.4}
+.toc a:hover{color:var(--text);background:var(--surface-2)}
+.toc a.on{color:var(--text);font-weight:700;background:var(--card)}
+.toc a.on .n{color:var(--green)}
+.toc .n{font-size:12px;min-width:16px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.side-note{margin-top:12px;padding:16px 20px;font-size:13px;color:var(--text-2);line-height:1.6}
+.side-note b{color:var(--text)}
+
+.main{min-width:0;padding:8px 8px 120px}
+.panel{background:var(--surface);border-radius:8px;overflow:hidden}
+.wrap{max-width:1024px;margin:0 auto;padding:0 32px}
+
+/* ---------- hero (playlist header) ---------- */
+.hero{background:linear-gradient(180deg,#7a6236 0%,#3d321f 55%,var(--surface) 100%);padding:56px 32px 28px}
+.hero-in{display:flex;gap:28px;align-items:flex-end;max-width:960px;margin:0 auto}
+.cover{flex:0 0 200px;height:200px;border-radius:6px;box-shadow:var(--shadow-2);background:
+  radial-gradient(120% 90% at 20% 10%,#d9b878 0%,#a8823f 55%,#6e5226 100%);position:relative;overflow:hidden}
+.cover .tofu{position:absolute;left:34px;top:46px;width:132px;height:98px;border-radius:14px;background:linear-gradient(160deg,#fbfaf6 0%,#ecebe3 70%,#d8d5c8 100%);box-shadow:0 14px 24px rgba(0,0,0,.35), inset 0 -10px 0 rgba(0,0,0,.05)}
+.cover .tofu::before,.cover .tofu::after{content:"";position:absolute;top:14px;bottom:14px;width:2px;background:rgba(0,0,0,.06);left:44px}
+.cover .tofu::after{left:88px}
+.cover span{position:absolute;left:16px;bottom:12px;font-size:12px;font-weight:700;color:#2a2010}
+.cover em{position:absolute;right:14px;top:12px;font-style:normal;font-size:11px;font-weight:700;color:#2a2010;background:rgba(255,255,255,.45);border-radius:9999px;padding:2px 8px}
+.kind{font-size:13px;font-weight:700;color:var(--text)}
+.hero h1{margin:6px 0 14px;font-size:clamp(28px,4vw,44px);line-height:1.2;font-weight:800;letter-spacing:-.02em}
+.hero p.lead{margin:0 0 14px;color:var(--text-3);font-size:16px;max-width:64ch}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14.5px;color:var(--text-2)}
+.meta b{color:var(--text);font-weight:700}
+
+/* ---------- section ---------- */
+.sec{padding:40px 0 8px}
+.sec-head{display:flex;gap:16px;align-items:flex-start;margin-bottom:6px}
+.sec-no{flex:0 0 48px;height:48px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-weight:700;font-size:15px;color:var(--text)}
+.sec h2{margin:2px 0 4px;font-size:27px;line-height:1.3;font-weight:700;letter-spacing:-.01em}
+.sec .sub{margin:0;color:var(--text-2);font-size:15.5px}
+.sec h3{margin:36px 0 12px;font-size:20px;line-height:1.35;font-weight:600}
+.sec h4{margin:24px 0 8px;font-size:17px;font-weight:700}
+.sec p{margin:0 0 12px;color:var(--text-3)}
+.sec p strong,.sec li strong{color:var(--text)}
+ul.dots{margin:0 0 14px;padding-left:18px;color:var(--text-3)}
+ul.dots li{margin:4px 0}
+ul.dots li::marker{color:var(--text-2)}
+
+/* tags */
+.tag{display:inline-block;vertical-align:1px;font-size:12px;font-weight:700;line-height:1.5;padding:1px 8px;border-radius:9999px;white-space:nowrap;margin-right:4px}
+.t-ver{background:rgba(83,157,245,.16);color:var(--blue)}
+.t-obs{background:var(--card);color:var(--text-3)}
+.t-est{background:rgba(255,164,43,.14);color:var(--orange)}
+.t-fix{background:rgba(243,114,127,.14);color:var(--red)}
+.t-sup{background:transparent;color:var(--orange);box-shadow:inset 0 0 0 1px var(--orange)}
+.t-add{background:transparent;color:var(--green);box-shadow:inset 0 0 0 1px var(--green-2)}
+
+/* callouts */
+.note{background:var(--surface-2);border-radius:8px;padding:18px 20px;margin:18px 0;font-size:15.5px;color:var(--text-3)}
+.note p:last-child{margin-bottom:0}
+.note .h{display:block;font-weight:700;color:var(--text);margin-bottom:6px;font-size:16px}
+.note.sup{box-shadow:inset 3px 0 0 var(--orange)}
+.note.add{box-shadow:inset 3px 0 0 var(--green)}
+.note.fix{box-shadow:inset 3px 0 0 var(--red)}
+.note.key{background:var(--card)}
+
+/* summary cards */
+.sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0 8px}
+.sum div{background:var(--surface-2);border-radius:8px;padding:18px;font-size:15.5px;color:var(--text-3)}
+.sum b{display:block;color:var(--text);font-size:17px;margin-bottom:4px;line-height:1.4}
+
+/* tables */
+.tbl{overflow-x:auto;margin:14px 0 18px;border-radius:8px;background:var(--surface-2)}
+table{width:100%;border-collapse:collapse;font-size:15px;line-height:1.6}
+th{text-align:left;font-weight:700;color:var(--text-2);font-size:13.5px;padding:12px 14px;white-space:nowrap;box-shadow:inset 0 -1px 0 var(--line)}
+td{padding:12px 14px;vertical-align:top;color:var(--text-3);box-shadow:inset 0 -1px 0 var(--line)}
+tr:last-child td{box-shadow:none}
+tbody tr:hover td{background:rgba(255,255,255,.035)}
+td b{color:var(--text)}
+td:first-child b{white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.hl{color:var(--green);font-weight:700}
+.cap{font-size:13.5px;color:var(--text-2);margin:-8px 0 18px}
+
+/* stacked bars */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--text-2);margin:8px 0 10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.bars{display:grid;gap:10px;margin:6px 0 16px}
+.bar-row{display:grid;grid-template-columns:110px 1fr 64px;gap:12px;align-items:center;font-size:14.5px}
+.bar-row .nm{font-weight:700}
+.bar-row .ct{color:var(--text-2);text-align:right;font-variant-numeric:tabular-nums}
+.stack{display:flex;height:16px;border-radius:9999px;overflow:hidden;background:var(--card)}
+.stack span{display:block;height:100%;width:var(--w)}
+.c-retail{background:#e6e6e6}.c-brand{background:var(--green)}.c-press{background:#9a9a9a}.c-blog{background:#5f5f5f}.c-pub{background:#3d3d3d}
+
+/* quadrant */
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.quad div{background:var(--surface-2);border-radius:8px;padding:16px 18px;font-size:15px;color:var(--text-3)}
+.quad b{display:block;color:var(--text);margin-bottom:4px}
+.quad .now{box-shadow:inset 0 0 0 1px var(--green-2)}
+
+/* flow */
+.flow{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;margin:14px 0}
+.flow .layer{background:var(--surface-2);border-radius:8px;padding:16px}
+.flow .layer b{display:block;font-size:17px;margin-bottom:6px}
+.flow .layer small{display:block;color:var(--text-2);font-size:13.5px;margin-bottom:8px}
+.flow .arr{display:grid;place-items:center;color:var(--text-2);font-size:20px}
+.flow ul{margin:0;padding-left:16px;font-size:15px;color:var(--text-3)}
+
+/* sentence match */
+.match{display:grid;gap:8px;margin:12px 0 16px}
+.match div{display:grid;grid-template-columns:1fr 24px 1fr 64px;gap:10px;align-items:center;background:var(--surface-2);border-radius:8px;padding:14px 16px;font-size:15px;color:var(--text-3)}
+.match .r{text-align:right;font-weight:700}
+.match .ok{color:var(--green)} .match .no{color:var(--red)}
+.match .ar{color:var(--text-2);text-align:center}
+mark{background:transparent;color:var(--text);font-weight:700;text-decoration:underline;text-decoration-color:var(--green);text-underline-offset:3px}
+
+/* insight list */
+.ins{counter-reset:i;display:grid;gap:10px;margin:14px 0}
+.ins div{background:var(--surface-2);border-radius:8px;padding:18px 20px 18px 62px;position:relative;color:var(--text-3);font-size:15.5px}
+.ins div::before{counter-increment:i;content:counter(i);position:absolute;left:16px;top:15px;width:28px;height:28px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--text)}
+.ins b{display:block;color:var(--text);font-size:17px;margin-bottom:4px}
+
+/* source list */
+.src{list-style:none;padding:0;margin:10px 0;display:grid;gap:8px}
+.src li{background:var(--surface-2);border-radius:8px;padding:14px 16px;font-size:14.5px;color:var(--text-2)}
+.src li b{color:var(--text);display:block;font-size:15px}
+
+/* bottom now-reading bar */
+.now-bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);box-shadow:var(--shadow-2);padding:10px 20px calc(10px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:auto minmax(0,300px) 1fr auto;gap:16px;align-items:center}
+.now-bar .play{width:32px;height:32px;border-radius:50%;background:var(--green);display:grid;place-items:center}
+.now-bar .play::after{content:"";border-left:9px solid #000;border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:2px}
+.now-bar .ti{font-size:14px;font-weight:700;line-height:1.3}
+.now-bar .ti small{display:block;font-weight:400;color:var(--text-2);font-size:12px}
+.prog{height:4px;border-radius:9999px;background:var(--border);overflow:hidden;max-width:520px;width:100%;justify-self:center}
+.prog i{display:block;height:100%;width:0;background:var(--text);border-radius:9999px}
+.now-bar:hover .prog i{background:var(--green)}
+.top-btn{appearance:none;border:0;background:var(--surface-2);color:var(--text);font:700 13px/1 var(--font);padding:9px 16px;border-radius:9999px;cursor:pointer}
+.top-btn:hover{background:var(--card)}
+
+/* mobile nav */
+.mnav{display:none}
+@media (max-width:896px){
+  body{font-size:16px}
+  .app{grid-template-columns:1fr}
+  .side{display:none}
+  .main{padding:0 0 120px}
+  .panel{border-radius:0}
+  .mnav{display:flex;gap:8px;overflow-x:auto;position:sticky;top:0;z-index:15;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;scrollbar-width:none}
+  .mnav::-webkit-scrollbar{display:none}
+  .mnav a{flex:0 0 auto;text-decoration:none;font-size:14px;font-weight:700;color:var(--text);background:var(--surface-2);padding:7px 14px;border-radius:9999px}
+  .mnav a.on{background:var(--green);color:#000}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:16;background:var(--bg)}
+  .wrap{padding:0 18px}
+  .hero{padding:32px 18px 22px}
+  .hero-in{flex-direction:column;align-items:flex-start;gap:18px}
+  .cover{flex-basis:auto;width:150px;height:150px}
+  .cover .tofu{left:26px;top:34px;width:98px;height:74px}
+  .flow{grid-template-columns:1fr}.flow .arr{transform:rotate(90deg)}
+  .quad{grid-template-columns:1fr}
+  .sum{grid-template-columns:1fr}
+  .match div{grid-template-columns:1fr;gap:4px}.match .ar{display:none}.match .r{text-align:left}
+  .bar-row{grid-template-columns:76px 1fr 44px}
+  .now-bar{grid-template-columns:auto 1fr auto}.prog{display:none}
+}
+@media print{
+  :root{color-scheme:light}
+  body{background:#fff;color:#000;font-size:11pt}
+  .side,.mnav,.now-bar{display:none!important}
+  .app{display:block}.panel,.hero,.note,.sum div,.tbl,.quad div,.flow .layer,.ins div,.src li,.match div{background:#fff!important;color:#000!important;box-shadow:none!important}
+  .hero{border-bottom:1px solid #ccc}
+  .sec p,td,ul.dots,.note,.sum div,.quad div,.ins div{color:#222!important}
+  th{color:#555!important} td,th{box-shadow:inset 0 -1px 0 #ddd!important}
+  .sec{break-inside:auto}.tbl,.note,.ins div{break-inside:avoid}
+  a{color:#000}
+}
+</style>
+</head>
+<body>
+
+<nav class="mnav" aria-label="섹션 이동">
+  <a href="#summary">요약</a>
+  <a href="#s1">1 공식몰 설계</a>
+  <a href="#s2">2 추천·구매처 분리</a>
+  <a href="#s3">3 인용 구조</a>
+  <a href="#s4">4 인사이트</a>
+  <a href="#s5">5 Samsung UK 진단</a>
+  <a href="#s6">보완 항목</a>
+  <a href="#s7">검증·출처</a>
+</nav>
+
+<div class="app">
+  <aside class="side" aria-label="목차">
+    <div class="side-card">
+      <div class="logo"><i aria-hidden="true"></i>GEO Study</div>
+      <ul class="toc">
+        <li><a href="#summary"><span class="n">•</span>핵심 요약</a></li>
+        <li><a href="#s1"><span class="n">1</span>풀무원 공식몰 GEO 설계 구조</a></li>
+        <li><a href="#s2"><span class="n">2</span>브랜드 추천과 구매처 연결의 분리</a></li>
+        <li><a href="#s3"><span class="n">3</span>엔진·질의 유형별 AI 인용 구조</a></li>
+        <li><a href="#s4"><span class="n">4</span>종합 인사이트</a></li>
+        <li><a href="#s5"><span class="n">5</span>Samsung UK 사이트 GEO 진단</a></li>
+        <li><a href="#s6"><span class="n">A</span>보완·추가 항목 일람</a></li>
+        <li><a href="#s7"><span class="n">B</span>검증 결과와 출처</a></li>
+      </ul>
+    </div>
+    <div class="side-note">
+      <b>표기 기준</b><br>
+      <span class="tag t-ver">검증</span> 1차 출처로 재확인<br>
+      <span class="tag t-obs">실측</span> 스터디 직접 수집·관찰<br>
+      <span class="tag t-est">추정</span> 데이터 기반 해석<br>
+      <span class="tag t-sup">보완 필요</span> 근거 보강 필요<br>
+      <span class="tag t-add">추가 제안</span> 이번 정리에서 신설<br>
+      <span class="tag t-fix">정정</span> 원문 대비 수정
+    </div>
+  </aside>
+
+  <main class="main" id="top">
+  <div class="panel">
+
+    <header class="hero">
+      <div class="hero-in">
+        <div class="cover" aria-hidden="true"><em>Vol. 03</em><div class="tofu"></div><span>GEO Study · 두부 편</span></div>
+        <div>
+          <div class="kind">통합 검토 보고서</div>
+          <h1>AI 검색 인용 구조와<br>공식몰 GEO 설계 방향</h1>
+          <p class="lead">풀무원 두부 사례로 진행한 GEO 스터디 3건을 하나의 흐름으로 정리하고, 각 주장을 1차 출처와 실측 데이터로 다시 대조했습니다. 근거와 맞지 않는 내용은 본문에서 제외하고 부록에 사유를 남겼습니다.</p>
+          <div class="meta">
+            <span>작성 <b>더프롬 기획팀</b></span>
+            <span>기준일 <b>2026년 10월 30일 (KST)</b></span>
+            <span>근거 <b>내부 스터디 3건 + 1차 출처 재검증 + Samsung UK 사이트 점검</b></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+
+<!-- ===================== SUMMARY ===================== -->
+<section class="sec" id="summary" data-title="핵심 요약">
+  <div class="sec-head"><div class="sec-no" aria-hidden="true">≡</div><div><h2>핵심 요약</h2><p class="sub">이 보고서가 다루는 질문과 결론</p></div></div>
+  <p>풀무원은 공식몰 상품 페이지를 AI가 읽기 쉬운 구조로 만들었고, 실제로 네 개 AI 모두 풀무원을 두부 추천 상위 브랜드로 꼽았습니다. 그런데 답변에 붙은 구매 링크는 상당 부분 컬리·SSG·쿠팡 같은 유통몰이었습니다. 이 보고서는 그 원인을 “추천”과 “구매처”가 서로 다른 데이터로 만들어지는 구조에서 찾고, 같은 기준으로 Samsung UK 공식 사이트를 진단해 보완 과제를 정리했습니다.</p>
+  <div class="sum">
+    <div><b>추천은 이겼고, 구매처는 갈렸다</b>풀무원 언급은 ChatGPT 7, Perplexity 10, Claude 9, Liner 10회(각 10문항). 그런데 구매 링크를 자사몰로 보낸 비중은 Claude 63%가 유통몰, Liner 0%, Perplexity 9%로 AI마다 극단적으로 달랐다.</div>
+    <div><b>인용은 공식몰, 구매 연결은 컬리</b>인용과 구매 연결을 나눠 세니, 구조 점수 1위 풀무원 공식몰이 인용 1위(16회)이고 컬리는 구매 연결 1위(9회)였다. 구조가 좋은 페이지는 정보 출처로, 구매 조건이 정리된 페이지는 구매처로 쓰였다.</div>
+    <div><b>페이지를 가른 건 문장</b>같은 템플릿의 페이지 중 질문의 표현을 그대로 받아 답하는 문장이 있는 페이지가 인용됐다. 감성 카피만 있는 페이지는 인용되지 않았다.</div>
+    <div><b>Samsung UK는 데이터 정합성이 먼저</b>사양표·제3자 근거·질문형 문서는 이미 갖췄다. 대신 카테고리 목록이 초기 HTML에서 비어 있고, 상세페이지의 가격·재고·통화 값이 서로 엇갈린다. 추천 층보다 구매처 층 보완이 시급하다.</div>
+  </div>
+  <div class="note"><span class="h">검토 범위와 한계</span>
+    <p>대상 문서는 ① 풀무원 GEO 전체 정리(2026.10.21), ② 두부 GEO 실측 스터디(답변 40개, 2026.10.26~27 수집), ③ AI 답변 2층 구조 해설(2026.10.26)입니다. 세 문서는 팀에서 분석한 것이라, 이번 정리에서는 각 주장을 1차 출처(논문·공식 문서)와 공개 사실에 다시 대조하고 메커니즘이 성립하는지 따졌습니다. 그 결과 근거가 약하거나 틀린 연결은 본문에서 빼거나 <span class="tag t-fix">정정</span>으로 표시했습니다(부록 B). 실측 수치 자체는 질문 10개를 AI별 1회씩 물어 사람이 분류한 값이라, 분류 기준·표본에서 오차가 있을 수 있고 경향을 보여 줄 뿐 인과를 증명하지 않습니다. 외부 연구는 대부분 미국·캐나다·영어 기준입니다.</p>
+  </div>
+</section>
+
+<!-- ===================== 1 ===================== -->
+<section class="sec" id="s1" data-title="풀무원 공식몰 GEO 설계 구조">
+  <div class="sec-head"><div class="sec-no">1</div><div><h2>풀무원 공식몰 GEO 설계 구조 분석</h2><p class="sub">AI가 읽을 수 있는 상품 페이지는 어떻게 구성되어 있는가</p></div></div>
+
+  <h3>1.1 추진 배경과 공개 성과</h3>
+  <p><span class="tag t-ver">검증</span>풀무원은 공식몰 ‘#풀무원’에 GEO를 선제 적용해 AI가 상품 정보를 찾고 이해하기 쉬운 환경을 만들었다고 밝혔습니다. 4월 1일 기준 적용 전후 4개월을 비교한 결과 방문자 수 2.3배, 구매 건수 7.4배 증가를 성과로 제시했고, AI 쇼핑 에이전트 도입도 검토 중입니다(파이낸셜뉴스, 2026.09.22).</p>
+  <div class="note sup"><span class="h"><span class="tag t-sup">보완 필요</span>성과 수치의 해석 범위</span>
+    <p>공개된 수치는 전후 4개월 단순 비교라 계절성·프로모션·유입 채널 변화가 분리되지 않았습니다. 이 중 AI 경유 유입이 얼마인지도 공개되지 않아, GEO 단독 효과로 인용할 때는 “회사 발표 기준”임을 함께 밝혀야 합니다.</p>
+  </div>
+
+  <h3>1.2 상품 페이지에 구현된 설계 요소</h3>
+  <p>단단한 부침용 두부(goodsView 615, 10.21 확인)와 특등급 국산콩두부 300g×2(goodsView 4788, 10.23·26 확인) 등을 자바스크립트 없이 받은 HTML 기준으로 확인한 결과입니다. 두 스터디의 관찰이 서로 일치하는 항목만 남겼습니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>설계 요소</th><th>구현 내용</th><th>AI 관점의 효과</th></tr></thead>
+    <tbody>
+      <tr><td><b>본문 서버 렌더</b><br><span class="tag t-obs">실측</span></td><td>상품 설명·후기가 초기 HTML에 포함. 메인·카테고리는 클라이언트에서 뒤늦게 채워지는 구조</td><td>JS를 실행하지 않는 AI 크롤러도 상품 페이지 내용을 읽음. 메인은 브라우즈형 질의에서 불리</td></tr>
+      <tr><td><b>상품 메타 정보</b><br><span class="tag t-obs">실측</span></td><td><code>og:type=product</code>, <code>product:price:amount</code>(4788: 4,980 KRW), 자기참조 canonical(goodsView/번호)</td><td>비교한 3개 사이트 중 유일하게 “상품이며 가격은 얼마”를 기계에 명시. 단, 이 메타·스키마는 주로 2부의 ‘구매처 단계’(쇼핑 피드·리치결과)에 작동하고 텍스트 인용에는 보조적</td></tr>
+      <tr><td><b>분류·제조 정보</b><br><span class="tag t-obs">실측</span></td><td>분류 경로 두부∙콩나물∙달걀 › 두부 › 두부, 제조사 풀무원식품, “상품 요약정보” 블록</td><td>AI가 페이지 성격(두부 상품, 풀무원 제조)을 즉시 파악</td></tr>
+      <tr><td><b>인용형 사실 문장</b><br><span class="tag t-obs">실측</span></td><td>“1984년 국내 최초 무공해 포장 두부”, 특등급 국산콩 100%, 유화제·거품제거제 무첨가(화학명 명시), 식품이력제, 콜드체인, 100g당 단가</td><td>연도·수치·고유명사가 들어간 문장은 답변에 그대로 옮기기 쉬움</td></tr>
+      <tr><td><b>용도 맥락 문장</b><br><span class="tag t-obs">실측</span></td><td>“부침이나 조림에 제격”, 들기름 부침·찌개 활용법, 특징 체크 리스트(아이콘 옆 텍스트)</td><td>용도형 질문과 문장 단위로 맞물림</td></tr>
+      <tr><td><b>정량 후기 + AI 후기 요약</b><br><span class="tag t-obs">실측</span></td><td>615: 평점 4.9(289명)·긍정 96.9%·포토후기 301개 / 4788: 평점 4.9(8,399명)·긍정 99%, 맛·품질·기타 요약과 리뷰 본문까지 텍스트</td><td>신뢰 신호를 숫자로 제공하고, AI가 요약할 내용을 미리 요약해 둠</td></tr>
+      <tr><td><b>라인업 상호 연결</b><br><span class="tag t-obs">실측</span></td><td>연관 두부 19~20여 개를 상품명·가격·단위가격·평점과 함께 링크</td><td>질문 조건(부침·찌개·소포장·유기농·대용량)마다 맞는 공식몰 페이지로 이동 가능</td></tr>
+      <tr><td><b>신선도 기준 명시</b><br><span class="tag t-obs">실측</span></td><td>“발송일 기준 소비기한 4일 이상 남은 제품”</td><td>유통몰과 같은 수준의 구매 판단 근거 제공</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>1.3 설계가 작동한 지점</h3>
+  <p><span class="tag t-obs">실측</span>공식몰 인용은 설명형으로 답하는 AI에서 집중됐습니다. Perplexity는 10개 답변 중 7개, Liner는 8개에서 풀무원 공식몰을 인용했고, 질문 조건에 따라 서로 다른 상품 페이지(4788·45286·3789 등)를 골랐습니다. 용도·성분·비교처럼 “왜 좋은가”를 설명해야 하는 질문에서 강했습니다.</p>
+  <p><span class="tag t-obs">실측</span>공식 채널 간 표현 일치도 작동했습니다. Liner는 풀무원 공식몰을 인용한 8개 답변 중 7개에서 풀무원 뉴스룸·공식 블로그를 함께 인용했습니다. “특등급 국산콩” 같은 설명을 여러 공식 채널이 같은 말로 반복하면서 교차 근거가 된 것으로 보입니다 <span class="tag t-est">추정</span>.</p>
+
+  <h3>1.4 확인된 취약점</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>항목</th><th>현재 상태</th><th>영향</th></tr></thead>
+    <tbody>
+      <tr><td><b>이미지 속 정보</b> <span class="tag t-obs">실측</span></td><td>구성·규격 등 일부가 이미지로만 제공, 원산지는 “상세설명참조”</td><td>AI가 해당 정보를 읽지 못함</td></tr>
+      <tr><td><b>메타 설명 일관성</b> <span class="tag t-obs">실측</span></td><td>4788은 사실형(“국산콩 대두 100%로 만든 두부”), 다른 상품은 감성 문구(“콩이 다른 두부”). 메타 키워드는 로하스·잇슬림 등 브랜드 전반 단어</td><td>검색 결과용 요약에서 사실 정보 누락</td></tr>
+      <tr><td><b>구매 조건 구조</b> <span class="tag t-obs">실측</span></td><td>가격·배송·보관 정보가 “항목: 값” 블록이 아니라 페이지 곳곳에 분산</td><td>구매형 질문에 바로 쓸 답이 맨 위에 없음</td></tr>
+      <tr><td><b>비교·제3자 근거</b> <span class="tag t-obs">실측</span></td><td>종류·타 브랜드 비교 콘텐츠 없음. 사실 주장이 자체 기준 위주이고 인증기관·시험 결과·언론 출처 연결이 약함</td><td>추천·비교 질의 대응력 약화</td></tr>
+      <tr><td><b>유사 페이지 분산</b> <span class="tag t-obs">실측</span></td><td>단단한 부침용 340g·340g×2·380g×2가 거의 같은 문구로 각각 존재. 인용은 3회·2회·0회로 나뉨</td><td>한 페이지로 모일 인용이 흩어짐 <span class="tag t-est">추정</span></td></tr>
+      <tr><td><b>운영 표기·최신성 신호</b> <span class="tag t-obs">실측</span></td><td>상품명 앞 “[기획]” 운영 표기, 본문 발행·수정일 미노출(후기에는 날짜 있음)</td><td>AI가 추출하는 제목에 불필요한 문자열이 섞임. 검색 연동형 AI의 최신성 우대를 못 받을 수 있음</td></tr>
+      <tr><td><b>검색 단계 노출</b> <span class="tag t-obs">실측</span></td><td>Perplexity가 인용한 공식몰 단단한 부침용(45286)을 사이트·상품명·번호까지 넣어 검색해도 SSG·컬리만 노출(검색엔진 1곳)</td><td>구조가 좋아도 검색에서 먼저 잡히지 않으면 AI가 열어 보지 않을 가능성 <span class="tag t-est">추정</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note fix"><span class="h"><span class="tag t-fix">정정</span>화면 폭 1280px은 AI 인용 요인이 아님</span>
+    <p>10.26 스터디는 공식몰의 데스크톱 고정 폭(1280px)을 약점으로 꼽았지만, AI 크롤러(GPTBot·ClaudeBot·PerplexityBot 등)는 CSS로 그려진 화면이 아니라 자바스크립트 실행 전 HTML의 글자를 읽습니다. 화면 폭·반응형 여부는 추출되는 텍스트를 바꾸지 않으므로 AI 인용에는 영향이 없어, 이 항목은 GEO 과제에서 제외했습니다. 반응형은 구글의 모바일 우선 색인 같은 전통 SEO의 사용성 요소일 뿐입니다.</p>
+  </div>
+  <div class="note sup"><span class="h"><span class="tag t-sup">보완 필요</span>구조화 데이터(JSON-LD) 실제 탑재 상태</span>
+    <p>이번에 615 페이지를 직접 열어 확인한 결과와, 그 데이터가 어느 층(추천 vs 구매처)에 작동하는지는 바로 아래 <strong>1.5</strong>에서 다룹니다.</p>
+  </div>
+
+  <h3>1.5 기계가 읽는 층 — 스키마는 구매처용, llms.txt는 보조</h3>
+  <p><span class="tag t-obs">실측</span>615 페이지(단단한 부침용 두부 380g)를 직접 열어 확인한 결과, HTML <code>&lt;head&gt;</code>에 <code>og:type=product</code>, <code>product:price:amount=4750</code>, <code>product:price:currency=KRW</code>, 자기참조 canonical, og 제목·이미지가 모두 들어 있었습니다. “이건 상품이고 가격은 4,750원”을 기계에 알리는 OpenGraph 상품 메타는 실재합니다. 전체 소스로 보면 이 페이지는 Nuxt 기반 서버 렌더(SSR)이고, 본문·후기·JSON-LD가 초기 HTML에 들어 있습니다. 다만 <code>og:description</code>은 감성형(“콩이 다른 두부”), 메타 키워드는 브랜드 전반 단어(로하스·잇슬림 등)였고, <code>viewport</code>는 <code>width=1280</code>으로 확인돼 위 1.4 정정과 일치했습니다.</p>
+  <div class="note add"><span class="h"><span class="tag t-add">확인됨</span>schema.org JSON-LD가 초기 HTML에 실제로 탑재</span>
+    <p>615 페이지 전체 소스를 확인한 결과, <code>&lt;head&gt;</code>에 두 개의 JSON-LD가 있었습니다. 하나는 사이트 전역의 <code>OnlineStore</code>·<code>WebSite</code>, 다른 하나(<code>data-hid="goods-jsonld"</code>)는 <strong>Product 스키마</strong>로 <code>offers</code>(price 4750·priceCurrency KRW·availability InStock), <code>aggregateRating</code>(4.9·296), <code>review</code>, <code>nutrition</code>, <code>brand</code>, <code>sku</code>, <code>image</code>를 담고 있었습니다. 앞서 1.4에서 “확인 필요”로 남긴 JSON-LD 탑재 여부는 <strong>이로써 해결</strong>되며, 가격 필드도 들어 있었습니다(10.26 해설의 내부 리포트 중 “가격 필드 누락”은 615에는 해당하지 않음).</p>
+  </div>
+  <div class="note sup"><span class="h"><span class="tag t-sup">보완 필요</span>JSON-LD의 데이터 품질 손봐야 할 것</span>
+    <p>탑재는 됐지만 값에 결함이 있습니다. ① <code>nutrition</code>의 “총량 기준” 영양값이 모두 0(㎉·g·㎎)으로 들어가 있음 — 10.26 해설의 “영양값 0”이 확인된 지점. ② <code>offers.url</code>이 쿼리형(<code>goodsView?goods=615</code>)이라 path형 canonical(<code>goodsView/615</code>)과 다름. ③ <code>review</code>가 본문 한 줄뿐이고 작성자·평점·날짜가 없음. ④ <code>reviewCount</code>는 296인데 화면 후기 수는 297. ⑤ JSON-LD <code>description</code>은 오히려 사실형(“100% 특등급 국산콩… 부침·조림에 최적화”)이라, 감성형 <code>og:description</code>과 톤이 엇갈림. 리치 결과·쇼핑 데이터의 정확도를 위해 ①~④를 맞추는 것이 다음 작업입니다.</p>
+  </div>
+  <p><span class="tag t-ver">검증</span><strong>llms.txt는 인용을 올리는 장치가 아닙니다.</strong> 구글은 검색과 생성형 AI 기능에 llms.txt를 사용하지 않는다고 명시했고, 서버 로그 분석에서는 AI 크롤러가 이 파일을 0.1% 안팎으로만 요청했습니다. 약 30만 도메인을 분석한 결과 llms.txt 유무와 AI 인용률 사이에 상관관계가 없었습니다. 깔아 두는 비용은 낮지만, 인용을 보장하는 장치로 기대하면 안 되는 단계입니다.</p>
+  <p><span class="tag t-ver">검증</span><strong>스키마는 중요하지만, 그 가치는 “구매처 층”에 있습니다.</strong> 구글 검색 센트럴(2026.7 갱신)은 구조화 데이터가 생성형 AI 검색에 필수가 아니며 추가로 넣어야 할 특별한 schema.org 마크업도 없다고 밝힙니다. 대규모 분석에서도 스키마 유무와 인용 가능성 사이에 뚜렷한 상관이 없었고, LLM은 JSON-LD가 아니라 렌더된 텍스트를 읽는 것으로 나타났습니다. 그래서 “스키마를 넣으면 텍스트 인용이 오른다”는 기대는 근거가 약합니다. <strong>그런데도 기업이 JSON-LD에 공들이는 이유</strong>는, 스키마가 다른 곳에서 확실히 일하기 때문입니다 — ① 검색 결과의 <strong>리치 결과</strong>(별점·가격·재고가 SERP에 노출돼 클릭률을 올림), ② 구글 쇼핑·Merchant Center·Shopping Graph 같은 <strong>쇼핑/구매처 데이터</strong>, ③ 쇼핑 에이전트가 가격·재고를 실시간 파싱하는 <strong>‘기계가 읽는 상품 정체성’</strong>. 풀무원 615가 Product·Offer 스키마를 갖춘 것도 바로 이 2부의 <strong>구매처(2층)</strong>·리치 결과를 겨냥한 올바른 조치입니다. 혼선은 GEO 마케팅이 “스키마=기계가 읽게 함”(쇼핑·리치 결과에서 사실)과 “스키마=AI 인용 상승”(미검증)을 뭉뚱그린 데서 옵니다.</p>
+  <div class="note key"><span class="h">정리 — 세 층을 분리하면</span>
+    <p><strong>추천(1층) 텍스트 인용</strong>은 JS 없이 읽히는 본문과 질문에 답하는 문장이 좌우하고(6부·3.4), <strong>구매처(2층)</strong>는 Product·Offer 스키마와 쇼핑 피드가 좌우합니다. <strong>llms.txt</strong>는 어느 쪽도 보장하지 않습니다. 그래서 풀무원·삼성 모두 “스키마 구조화”는 해야 하지만, 그 효과를 텍스트 인용이 아니라 구매처 선정과 리치 결과에서 측정해야 정확합니다.</p>
+  </div>
+</section>
+
+
+<!-- ===================== 2 ===================== -->
+<section class="sec" id="s2" data-title="브랜드 추천과 구매처 연결의 분리">
+  <div class="sec-head"><div class="sec-no">2</div><div><h2>브랜드 추천과 구매처 연결의 분리 메커니즘</h2><p class="sub">추천 제품은 풀무원인데 구매 링크는 왜 다른 판매처로 연결되는가 — 질문(프롬프트)의 종류로 읽는다</p></div></div>
+
+  <h3>2.1 관찰된 현상</h3>
+  <p><span class="tag t-obs">실측</span>브랜드 이름을 넣지 않은 두부 질문 10개에서 네 AI 모두 풀무원과 CJ 행복한콩을 가장 많이 언급했습니다. 그러나 답변에 붙은 링크는 AI마다 크게 달랐습니다. 같은 상품(풀무원 특등급 국산콩 300g×2)에 대해 Claude는 컬리 페이지를 4번 인용했고 풀무원 공식몰은 한 번도 인용하지 않았습니다. 상품과 브랜드가 같아도 링크는 판매처 페이지로 붙은 것입니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>AI</th><th class="num">풀무원 언급</th><th class="num">풀무원 첫 추천</th><th>인용 1위</th><th class="num">구매 연결 비중(추정)</th></tr></thead>
+    <tbody>
+      <tr><td><b>ChatGPT</b></td><td class="num">7/10</td><td class="num">7/10</td><td>CJ 더마켓·유통몰</td><td class="num">11%</td></tr>
+      <tr><td><b>Perplexity</b></td><td class="num">10/10</td><td class="num">10/10</td><td>풀무원 공식몰</td><td class="num">9%</td></tr>
+      <tr><td><b>Claude</b></td><td class="num">9/10</td><td class="num">7/10</td><td>쿠팡</td><td class="num hl">63%</td></tr>
+      <tr><td><b>Liner</b></td><td class="num">10/10</td><td class="num">6/10</td><td>언론·유튜브</td><td class="num">0%</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">실측 기준: 질문 10개 × AI 4개, 각 1회, 2026.10.26~27(KST) 수집. 구매 연결 비중은 AI 답변에 붙은 링크 중 ‘여기서 사세요’형 판매 링크로 분류된 비율(추정). 2026.10.30 전달된 분리 집계판 반영.</p>
+  <div class="note fix"><span class="h"><span class="tag t-fix">정정</span>“링크는 쿠팡”이라는 표현의 범위</span>
+    <p>해설 문서의 제목은 쿠팡을 대표 예시로 들었지만, 실측에서 구매형 AI의 대표 링크는 컬리(Claude 9개 답변)와 SSG·이마트(ChatGPT 6개 답변)였고 쿠팡은 네 AI 합계 16회로 SSG와 공동 3위였습니다. 본 보고서에서는 “유통몰”로 통칭합니다.</p>
+  </div>
+
+  <h3>2.2 먼저 질문(프롬프트)의 종류가 승자를 가른다</h3>
+  <p>자사몰이 인용되느냐는 “AI가 지금 어떤 질문에 답하는 중인가”에서 갈립니다. AI는 정답을 미리 정해 두지 않고, 프롬프트의 <strong>의도</strong>를 먼저 가늠한 뒤 거기에 맞는 페이지를 고릅니다. 토론토대 연구는 소비자 질의를 정보형(알고 싶다)·고려형(비교하고 싶다)·거래형(사고 싶다)으로 나눴을 때, 거래형으로 갈수록 판매처(브랜드·리테일) 비중이 오르는 것을 실제 인용으로 확인했습니다 <span class="tag t-ver">검증</span>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>프롬프트 예시</th><th>의도</th><th>주로 깨우는 단계</th><th>자사몰에 유리한가</th></tr></thead>
+    <tbody>
+      <tr><td>“국산콩 두부 뭐가 달라?”</td><td>정보형</td><td>추천(1단계) 텍스트</td><td class="hl">유리 — 성분·역사 설명이 자사몰에 있음</td></tr>
+      <tr><td>“풀무원 두부 어때?” (브랜드 지정)</td><td>정보형</td><td>추천(1단계) 텍스트</td><td class="hl">유리 — 브랜드 지정 질의는 공식 도메인으로 수렴(Search Atlas)</td></tr>
+      <tr><td>“부침용 두부 추천해줘”</td><td>고려형</td><td>추천(1단계), 기사·리뷰 우세</td><td>중립 — 제3자 비교·리뷰가 먼저 뽑힘</td></tr>
+      <tr><td>“두부 새벽배송으로 싸게”</td><td>거래형</td><td>구매처(2단계) 상품 데이터</td><td>불리 — 가격·재고·배송이 정형 데이터여야 함</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">의도 구분과 ‘거래형 → 판매처 비중 상승’은 토론토대 연구(arXiv 2509.08919)의 정보형·고려형·거래형 분석에 근거합니다. ‘브랜드 지정 → 공식 도메인 수렴’은 Search Atlas 분석입니다. 한국 두부의 프롬프트별 결과는 라이브 실측으로 확정해야 합니다.</p>
+  <div class="note key"><span class="h">한 줄로</span>
+    <p>정보형·브랜드 지정 프롬프트는 자사몰의 <strong>텍스트</strong>로 이기고, 거래형 프롬프트는 자사몰의 <strong>상품 데이터</strong>로만 겨룰 수 있습니다. “추천은 됐는데 구매 링크가 유통몰”은 거래형 프롬프트에서 2단계 데이터가 약할 때 나오는 결과입니다.</p>
+  </div>
+  <div class="note"><span class="h">한 페이지로 세 유형을 다 담을 수 있나?</span>
+    <p>유형마다 이기는 페이지가 달랐다고 해서, 페이지마다 한 유형만 골라야 하는 것은 아닙니다. AI는 페이지를 위에서 아래로 읽고 질문에 맞는 블록을 꺼내가므로, 한 페이지에 <strong>답(거래형) → 비교표(고려형) → 설명·근거(정보형)</strong> 순으로 쌓으면 어느 유형의 질문에도 가져갈 블록이 생깁니다. 다만 맨 위 슬롯(가장 먼저 읽히고 가장 많이 인용되는 자리)은 하나뿐이라, 거기엔 그 페이지의 <strong>주 역할</strong>에 맞는 답을 올려야 합니다. 그래서 결정할 것은 “어느 유형만 할까”가 아니라 “이 페이지의 주 역할은 무엇이고, 그 답을 맨 위에 두었는가”입니다. 사이트 차원에서는 역할을 나눠 — 상세페이지는 구매(거래형), 가이드·카테고리는 설명·비교(정보·고려형) — 세 유형을 모두 덮습니다. 실측 세 페이지가 각각 한 유형에만 강했던 건, 그 페이지들이 ‘한 역할짜리’ 상거래 페이지였기 때문입니다.</p>
+  </div>
+
+  <h3>2.3 AI 쇼핑 답변의 2단계 구조</h3>
+  <p>AI 쇼핑 답변 카드는 한 번에 만들어지지 않습니다. “무엇을 추천할지”와 “어디서 살지”가 서로 다른 재료로 채워집니다.</p>
+  <div class="flow">
+    <div class="layer"><b>1단계 · 추천 대상 선정</b><small>무엇을 추천할 것인가</small>
+      <ul><li>재료: 모델의 사전 지식, 웹 검색으로 찾은 브랜드 설명·리뷰·기사·비교글</li><li>결과: 제품 선택과 추천 이유</li><li>공식몰 페이지 품질이 주로 영향을 주는 단계</li></ul></div>
+    <div class="arr" aria-hidden="true">›</div>
+    <div class="layer"><b>2단계 · 구매처 연결</b><small>어디서 살 것인가</small>
+      <ul><li>재료: 판매처·가격·재고 등 상품 메타데이터, 제3자 데이터 제공업체 또는 판매자 직접 피드</li><li>결과: 이미지·가격·구매 링크·판매처 목록</li><li>페이지 문장보다 정형화된 상품 데이터가 중심</li></ul></div>
+  </div>
+  <h4>서비스별 공식 설명</h4>
+  <ul class="dots">
+    <li><span class="tag t-ver">검증</span><strong>ChatGPT:</strong> 상품을 누르면 판매처 목록이 표시될 수 있고, 이 목록은 제3자 제공업체 또는 판매자가 직접 보낸 판매처·상품 메타데이터로 생성된다고 OpenAI 도움말이 밝히고 있습니다. 최신 정보를 반영하려는 판매자를 위해 직접 상품 피드 신청 경로도 운영합니다.</li>
+    <li><span class="tag t-ver">검증</span><strong>Google AI Mode:</strong> Gemini와 Shopping Graph를 결합한 구조입니다. Shopping Graph는 500억 건 이상의 상품 리스팅에 리뷰·가격·재고 정보를 담고 있으며, 매시간 20억 건 이상이 갱신됩니다.</li>
+    <li><span class="tag t-est">업계 해설</span>Shopping Graph의 상당 부분이 Merchant Center 피드에서 온다는 설명이 일반적이지만, Merchant Center 데이터가 AI Mode의 직접 순위 신호라고 Google이 공식 확인한 적은 없습니다.</li>
+  </ul>
+  <div class="note add"><span class="h"><span class="tag t-add">추가 제안</span>판매처 순위 요인에 “제조사·주 판매자 여부”가 포함됨</span>
+    <p>OpenAI 도움말은 판매처 순위를 재고, 가격, 품질, 그리고 해당 상품의 제조사 또는 주 판매자인지 여부 등으로 정한다고 명시합니다. 원 스터디(10.21)는 “거래형 질의에서 자사몰 완전 역전은 어렵다”고 판단했지만, 이 요인은 제조사 공식몰이 데이터만 갖추면 구조적으로 유리할 수 있는 지점입니다. 공식몰 상품이 실제로 피드 경로에 들어가 있는지부터 확인할 가치가 있습니다.</p>
+  </div>
+
+  <h3>2.4 거래형 프롬프트에서 유통몰이 유리한 이유</h3>
+  <p>“두부 새벽배송”, “두부 최저가” 같은 거래형 프롬프트는 2단계(구매처) 데이터를 요구합니다. 이 단계에서 유통몰이 먼저 붙는 이유를 정리했습니다. <span class="tag t-est">추정</span>이며, 공식 문서가 아니라 위 구조와 실측 페이지에서 도출한 해석입니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>요인</th><th>대형 유통몰</th><th>브랜드 공식몰</th><th>실측 근거</th></tr></thead>
+    <tbody>
+      <tr><td><b>구매 조건의 위치</b></td><td>상단에 “항목: 값” 블록으로 정리</td><td>페이지 곳곳에 분산</td><td>컬리 상단 10개 항목(샛별배송·배송비·100g당 830원·소비기한 등). 컬리 인용 18회 중 7회가 구매 조건 질문</td></tr>
+      <tr><td><b>피드 연결</b></td><td>가격 비교·쇼핑 피드에 대량 연결된 경우가 많음</td><td>따로 등록·관리하지 않으면 경로 자체가 없을 수 있음</td><td>미확인 <span class="tag t-sup">보완 필요</span></td></tr>
+      <tr><td><b>리뷰 규모</b></td><td>상품당 리뷰가 많음</td><td>상대적으로 적음</td><td>SSG 68,543건, 컬리 23,062건, 공식몰 4788 8,399명</td></tr>
+      <tr><td><b>검색 노출</b></td><td>상품 수·도메인 신뢰도가 높아 상위 노출 가능성 큼</td><td>상품 번호로 검색해도 미노출 사례</td><td>45286 검색 결과에 SSG·컬리만 노출</td></tr>
+      <tr><td><b>값의 완결성</b></td><td>가격·재고·배송이 정형 필드로 채워짐</td><td>공식몰은 Product·Offer 스키마를 갖췄으나(615 확인) 영양 총량값 0 등 데이터 결함, 피드 연결은 미확인</td><td>615 JSON-LD 확인 / 피드 <span class="tag t-sup">보완 필요</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>2.5 결과를 네 가지 상태로 구분하기</h3>
+  <div class="quad">
+    <div><b>추천 ○ · 구매처 ○</b>우리 브랜드가 추천되고 구매 링크도 공식몰. 이상적 상태</div>
+    <div class="now"><b>추천 ○ · 구매처 ×</b>브랜드는 추천되지만 구매는 유통몰에서. 풀무원의 현재 상태(구매형 AI 기준)</div>
+    <div><b>추천 × · 구매처 ○</b>경쟁 브랜드가 추천되는 질문이라 공식몰 데이터가 좋아도 노출 기회가 거의 없음</div>
+    <div><b>추천 × · 구매처 ×</b>추천에서도 빠지고 구매처로도 연결되지 않음. 위험 상태</div>
+  </div>
+  <p><span class="tag t-est">추정</span>실측을 대입하면 풀무원의 “구매처 ×”는 모든 AI에 해당하지 않습니다. 설명형 AI(Perplexity·Liner)에서는 공식몰이 근거 출처로 가장 많이 인용됐고, 구매형 AI(ChatGPT·Claude)에서만 유통몰로 넘어갔습니다. 따라서 진단은 “AI 유형별로 다른 상태”로 기록하는 것이 정확합니다.</p>
+  <div class="note add"><span class="h"><span class="tag t-add">해결됨</span>근거 출처와 구매 링크를 분리한 집계판 입수</span>
+    <p>이전 집계는 근거 출처와 구매 링크를 합쳐 셌습니다. 2026.10.30 전달된 분리 집계판이 둘을 나눠 다시 셌고, 그 결과 <strong>인용 1위는 풀무원 공식몰(16회), 구매 연결 1위는 컬리(9회)</strong>로 1단계·2단계가 뚜렷이 갈렸습니다(구매 연결 21건 중 15건이 Claude). 본 보고서의 2.1·3장·4장 수치는 이 분리판을 반영했습니다.</p>
+  </div>
+
+  <h3>2.6 성과 지표의 분리</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>목표</th><th>관련 단계</th><th>측정 지표</th><th>주요 작업</th></tr></thead>
+    <tbody>
+      <tr><td><b>브랜드가 언급되는가</b></td><td>1단계</td><td>타깃 질문 언급률, 경쟁사 대비 점유율(SoV), 추천 순위</td><td>질문 의도에 맞는 콘텐츠, 근거 있는 카피, 외부 리뷰·기사 확보</td></tr>
+      <tr><td><b>정보가 정확한가</b></td><td>1·2단계</td><td>AI 답변 속 가격·스펙·모델명 오류 건수</td><td>페이지·스키마·피드 값 일치, 지난 세대 정보와 플레이스홀더 정리</td></tr>
+      <tr><td><b>자사 채널로 유입되는가</b></td><td>2단계</td><td>공식몰 링크가 붙는 답변 비율, AI 경유 유입·구매</td><td>상품 피드 등록·갱신, 스키마 가격·재고, 공식몰 혜택의 데이터화</td></tr>
+    </tbody>
+  </table></div>
+  <p>브랜드 인지가 목표라면 “풀무원 추천 + 유통몰 링크”도 성공입니다. 공식몰 매출이 목표라면 1단계 성과만으로는 부족하고 2단계 작업이 따로 필요합니다.</p>
+</section>
+
+<!-- ===================== 3 ===================== -->
+<section class="sec" id="s3" data-title="엔진·질의 유형별 AI 인용 구조">
+  <div class="sec-head"><div class="sec-no">3</div><div><h2>엔진·질의 유형별 AI 인용 구조 분석</h2><p class="sub">어떤 AI가, 어떤 질문에, 어느 사이트의 어느 페이지를 인용했는가</p></div></div>
+
+  <h3>3.1 측정 설계</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>항목</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td><b>질문</b></td><td>브랜드명 없이 소비자 말투로 작성한 10개. 처음 구매, 트렌드, 구매 조건(새벽배송·소포장), 가성비, 성분·건강, 용도(부침·된장찌개), 대상(아이 반찬), 비교(국산콩·수입콩)</td></tr>
+      <tr><td><b>AI</b></td><td>ChatGPT·Claude(웹 검색 직접 켬), Perplexity·Liner(상시 검색). Gemini는 기본 답변에 출처 링크가 없고, 요청 시 임시 번호 주소를 생성해 제외</td></tr>
+      <tr><td><b>방식</b></td><td>질문마다 새 대화에서 1회, 답변과 출처 링크를 테스트 도구로 수집(10.26~27 KST). 답변 40개 · 인용 페이지 401개 · 구매 연결 페이지 37개(인용과 구매 연결을 분리 집계)</td></tr>
+      <tr><td><b>페이지 해부</b></td><td>인용 상위 컬리·풀무원 공식몰·SSG의 상품 페이지를 사이트별 3개씩, 자바스크립트 없이 받은 HTML로 확인. 쿠팡은 자동 접속 차단으로 제외</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>3.2 엔진별 인용 출처 구조</h3>
+  <p><span class="tag t-obs">실측</span>답변 방식에 따라 네 유형으로 나뉘었습니다. 아래 막대는 <strong>인용으로 분류된 링크만</strong> 집계한 출처 분포입니다(‘여기서 사세요’형 구매 연결 링크는 제외). 초록색은 브랜드 공식 채널 비중입니다.</p>
+  <div class="legend" aria-hidden="true"><span><i class="c-retail"></i>유통 플랫폼</span><span><i class="c-brand"></i>브랜드 공식</span><span><i class="c-press"></i>언론</span><span><i class="c-blog"></i>블로그·커뮤니티</span><span><i class="c-pub"></i>공공·백과</span></div>
+  <div class="bars">
+    <div class="bar-row"><span class="nm">ChatGPT</span><div class="stack" role="img" aria-label="유통 75%, 브랜드 21%"><span class="c-retail" style="--w:75%"></span><span class="c-brand" style="--w:21%"></span></div><span class="ct">24건</span></div>
+    <div class="bar-row"><span class="nm">Perplexity</span><div class="stack" role="img" aria-label="유통 25%, 브랜드 28%, 언론 16%, 블로그 16%, 공공 9%"><span class="c-retail" style="--w:25%"></span><span class="c-brand" style="--w:28%"></span><span class="c-press" style="--w:16%"></span><span class="c-blog" style="--w:16%"></span><span class="c-pub" style="--w:9%"></span></div><span class="ct">32건</span></div>
+    <div class="bar-row"><span class="nm">Claude</span><div class="stack" role="img" aria-label="유통 92%, 블로그 8%, 브랜드 0%"><span class="c-retail" style="--w:92%"></span><span class="c-blog" style="--w:8%"></span></div><span class="ct">13건</span></div>
+    <div class="bar-row"><span class="nm">Liner</span><div class="stack" role="img" aria-label="유통 27%, 브랜드 18%, 언론 10%, 블로그 31%, 공공 2%"><span class="c-retail" style="--w:27%"></span><span class="c-brand" style="--w:18%"></span><span class="c-press" style="--w:10%"></span><span class="c-blog" style="--w:31%"></span><span class="c-pub" style="--w:2%"></span></div><span class="ct">147건</span></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>AI</th><th>답변 유형</th><th>답변 방식</th><th>주로 인용한 곳</th></tr></thead>
+    <tbody>
+      <tr><td><b>ChatGPT</b></td><td>쇼핑형</td><td>상품·가격을 길게 비교</td><td>SSG·이마트, CJ 더마켓, 다나와, 홈플러스, 롯데ON</td></tr>
+      <tr><td><b>Claude</b></td><td>구매처 안내형</td><td>짧게 고르고 바로 살 수 있는 판매 페이지 첨부</td><td>컬리(9개 답변), 쿠팡, SSG·이마트, 오아시스</td></tr>
+      <tr><td><b>Perplexity</b></td><td>설명·출처형</td><td>종류와 이유를 설명</td><td>풀무원 공식몰(7), 언론사, 공공·백과, 커뮤니티</td></tr>
+      <tr><td><b>Liner</b></td><td>자료 수집형</td><td>답변당 평균 15곳 인용</td><td>언론·유튜브(각 10), 풀무원 공식몰·뉴스룸(각 8), 쿠팡, 네이버 블로그</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">유형 이름은 이번 40개 답변에서 관찰한 경향에 붙인 이름입니다. Liner는 답변당 인용 수가 많아 블로그·커뮤니티 비율이 높게 나타납니다.</p>
+
+  <h3>3.3 질의 유형별 인용 패턴</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>질의 유형</th><th>강하게 인용된 페이지</th><th>관찰 내용</th></tr></thead>
+    <tbody>
+      <tr><td><b>구매 조건</b><br>(새벽배송·소포장)</td><td>컬리·쿠팡 상품 페이지</td><td>새벽배송 질문에서 네 AI 모두 컬리 또는 쿠팡을 인용. AI와 무관한 일관된 패턴</td></tr>
+      <tr><td><b>용도·성분·비교</b></td><td>풀무원 공식몰</td><td>공식몰 인용 16회 중 용도 4, 구매 조건 3, 트렌드·성분·비교 각 2. 설명이 필요한 질문에서 강함</td></tr>
+      <tr><td><b>처음 구매·트렌드·가성비</b></td><td>SSG·이마트</td><td>여러 상품을 둘러봐야 하는 질문에서 반복 인용. 두부 7종 설명·비교표·타 브랜드 추천 링크가 한 페이지에 있음</td></tr>
+      <tr><td><b>설명이 필요한 비교 질문</b></td><td>컬리는 약함</td><td>컬리는 구매 조건 7회, 비교 1회. 강점이 필요 없는 질문에서는 선택되지 않음</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>3.4 사이트 → 페이지 → 문장 단위로 좁혀 본 인용 구조</h3>
+  <h4>사이트 단위: 상위권은 1~2회 차이</h4>
+  <p><span class="tag t-obs">실측</span>인용과 구매 연결을 나눠 세면 1위 사이트가 서로 달랐습니다. <strong>인용</strong>은 풀무원 공식몰과 쿠팡이 각 16회로 가장 많고 언론 15, 컬리 11, SSG 9, CJ 더마켓 8이었습니다. <strong>구매 연결</strong>은 컬리 9, SSG 5, 풀무원 공식몰·쿠팡·오아시스 각 2였습니다. 구매 연결 21건 중 15건이 Claude였고 Liner는 구매 링크를 0건 달았습니다. 정보를 가져오는 곳과 사러 보내는 곳이 서로 달랐던 것입니다.</p>
+
+  <h4>페이지 단위: 사이트는 겹쳐도 페이지는 거의 겹치지 않음</h4>
+  <p><span class="tag t-obs">실측</span>인용된 페이지 401개 중 두 AI가 겹쳐 인용한 페이지는 10개, 세 AI 이상은 0개였습니다. 겹친 10개 중 5개가 브랜드 공식 상품 페이지(풀무원 공식몰 4, CJ 더마켓 1), 3개가 질문형 콘텐츠(“두부 추천” 큐레이션, “수입콩 두부 영양 차이” 기사, “아기 두부” 가이드), 2개가 검색 결과였습니다. 구매 연결로 두 AI가 겹친 페이지는 컬리 특등급 300g×2 하나뿐이었습니다. 공통점은 한 상품 = 한 주소, 브랜드 공식 페이지, 질문이 곧 제목인 글이었습니다.</p>
+
+  <h4>문장 단위: 질문을 “따라 말한” 페이지가 선택됨</h4>
+  <p><span class="tag t-est">추정</span>같은 사이트의 상세 페이지는 템플릿이 같았고, 고유 주소·용량이 든 제목·텍스트 가격·서버 렌더 본문이라는 기본 조건도 인용 여부와 관계없이 대부분 갖추고 있었습니다. 차이를 만든 것은 질문의 표현을 그대로 받아 답하는 문장이었습니다.</p>
+  <div class="match">
+    <div><span>“두부부침 하면 자꾸 <mark>부서지던데</mark>?”</span><span class="ar">›</span><span>CJ 더마켓 “<mark>부서지지 않고</mark> 노릇하게”, 풀무원 “잘 <mark>부스러지지 않아</mark>”</span><span class="r ok">인용</span></div>
+    <div><span>“혼자 살아서 <mark>한 모도 많은데</mark>?”</span><span class="ar">›</span><span>풀무원 한끼 두부 “<mark>한 모는 너무 많고</mark>… 소용량”</span><span class="r ok">인용</span></div>
+    <div><span>“혼자 살아서 한 모도 많은데?”</span><span class="ar">›</span><span>풀무원 한끼두부 찌개용 “한번 조리에 남김 없이 딱!”</span><span class="r no">미인용</span></div>
+    <div><span>“<mark>첨가물 없는</mark> 국산콩 두부?”</span><span class="ar">›</span><span>컬리 CJ 행복한콩 “<mark>2가지 재료로만</mark>”, 오아시스 “소포제·유화제 <mark>무첨가</mark>”</span><span class="r ok">인용</span></div>
+  </div>
+
+  <h3>3.5 나눠 보면: 인용은 구조로, 구매 연결은 구매 조건으로</h3>
+  <p><span class="tag t-obs">실측</span>세 사이트를 23개 항목으로 평가한 구조 점수를, 인용과 구매 연결로 나눈 실제 순위와 나란히 놓았습니다. 둘을 합쳐 세면 가려지던 분업이, 나눠 세니 드러났습니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>기준</th><th class="num">컬리</th><th class="num">SSG·이마트</th><th class="num">풀무원 공식몰</th></tr></thead>
+    <tbody>
+      <tr><td><b>단순 구조 점수</b> (23점 만점)</td><td class="num">13.5점 · 59%</td><td class="num">17점 · 74%</td><td class="num hl">18점 · 78%</td></tr>
+      <tr><td><b>인용</b> (네 AI 합계, 추정)</td><td class="num">11회</td><td class="num">9회</td><td class="num hl">16회</td></tr>
+      <tr><td><b>구매 연결</b> (네 AI 합계, 추정)</td><td class="num hl">9회</td><td class="num">5회</td><td class="num">2회</td></tr>
+      <tr><td><b>구매형 적합 점수</b> (6점 만점)</td><td class="num hl">6</td><td class="num">4.5</td><td class="num">4.5</td></tr>
+      <tr><td><b>구매 연결 링크</b> (ChatGPT + Claude)</td><td class="num hl">9건</td><td class="num">5건</td><td class="num">1건</td></tr>
+    </tbody>
+  </table></div>
+  <p><span class="tag t-est">추정</span>인용만 보면 구조 점수 1위 풀무원 공식몰이 인용도 1위(16회)입니다. 설명형 AI(Perplexity·Liner)가 공식 출처로 공식몰을 우선한 결과로, 그 16회 중 15회가 두 AI였습니다. 구매 연결은 반대로, 구매 답에 필요한 6개 항목(구매 조건 블록, 여러 브랜드 비교, 가격과 단위가격, 제목 속 규격, 소비기한, 본문 노출)을 모두 갖춘 컬리가 1위(9회)였고 그 9회 중 8회가 Claude였습니다. 즉 구조가 좋은 공식 페이지는 정보 출처로, 구매 조건이 정리된 판매 페이지는 구매처로 쓰였습니다. SSG와 풀무원은 구매형 점수가 같은데 구매 연결은 5 : 1로 갈렸는데, 이 차이는 페이지 구조가 아닌 검색 노출 같은 구조 밖 요인으로 보입니다. 표본이 AI 두 곳씩 20개 답변이라 원인을 분리할 수는 없습니다.</p>
+
+  <h3>3.6 외부 연구와의 대조</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>외부 근거</th><th>내용</th><th>두부 실측과의 관계</th></tr></thead>
+    <tbody>
+      <tr><td><b>토론토대 연구</b><br>arXiv 2509.08919<br><span class="tag t-ver">검증</span></td><td>ChatGPT(검색) 소비자 랭킹 질의에서 제3자 기사·리뷰(earned) 우세. 가전은 미국 92.1%·캐나다 77.6%(브랜드 22.1%), 자동차는 미국 81.9%(브랜드 18.1%)·캐나다 69.1%(브랜드 30.9%). 거래형 질의에서는 브랜드 비중이 올라가며, 이 연구의 “브랜드” 분류에는 제조사와 리테일러가 함께 포함됨</td><td><b>일치:</b> 연구에서 Perplexity가 브랜드·리테일 도메인 비중이 가장 높았고, 실측에서도 공식몰을 가장 많이 인용. <b>불일치:</b> 연구에서 Claude는 가전 earned 약 93.7%였으나 실측에서는 인용 기준으로도 언론 0%·유통몰 92%(브랜드 0%)</td></tr>
+      <tr><td><b>같은 연구의 표현 변경 실험</b><br><span class="tag t-ver">검증</span></td><td>표현을 바꿔도 AI의 인용 도메인은 Google보다 안정적(기준 질의 대비 겹침 대체로 0.3~0.7)이고, 언어를 바꿀 때보다 영향이 작음</td><td>질문 표현 차이보다 질문 의도·언어가 더 큰 변수라는 해석과 부합</td></tr>
+      <tr><td><b>Search Atlas</b><br>응답 550만 건·질의 74.8만 건<br><span class="tag t-ver">검증</span></td><td>브랜드 지정·지역 업체 질의는 모델과 관계없이 공식 사이트 하나만 인용하는 경향. 검색 연동형 Perplexity는 Google 결과와 도메인 43% 겹침, 비검색 GPT는 21%</td><td>이번 실측 질문은 모두 브랜드명이 없어 “브랜드 지정 → 공식몰 수렴”은 검증되지 않음</td></tr>
+      <tr><td><b>GEO 원 연구</b><br>Aggarwal 외, KDD 2024<br><span class="tag t-ver">검증</span></td><td>인용·통계·출처를 넣는 최적화로 생성형 엔진 가시성 최대 40% 향상, 키워드 나열은 효과 미미</td><td>풀무원의 사실 문장 밀도 전략과 방향이 같음. 다만 효과는 페이지가 후보로 검색된 뒤에 작동</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note sup"><span class="h"><span class="tag t-sup">보완 필요</span>한국 식품 카테고리에서 earned 편향이 재현되지 않은 이유</span>
+    <p>해외 연구의 Claude는 제3자 기사 중심이었지만 두부 실측의 Claude는 유통몰만 인용했습니다. 질의가 랭킹형이 아닌 구매 맥락이었는지, 한국어·식료품 특성인지, 표본(10문항 1회) 때문인지는 이번 데이터로 구분되지 않습니다. 같은 질문을 엔진별 2~3회 반복하고 랭킹형 질문(“두부 브랜드 순위”)을 추가해 재측정해야 합니다.</p>
+  </div>
+</section>
+
+<!-- ===================== 4 ===================== -->
+<section class="sec" id="s4" data-title="종합 인사이트">
+  <div class="sec-head"><div class="sec-no">4</div><div><h2>종합 인사이트</h2><p class="sub">세 스터디와 외부 근거를 교차해 얻은 결론</p></div></div>
+  <div class="ins">
+    <div><b>추천과 구매처는 다른 데이터로 경쟁한다</b>추천(1단계)은 웹 콘텐츠와 근거의 싸움이고, 구매처(2단계)는 정형 상품 데이터의 싸움이다. 공식몰 GEO가 “실패했다”가 아니라 “1단계는 이기고 2단계는 진 상태”로 읽어야 하며, 성과 지표도 언급률·정확도·공식몰 링크 비율로 분리해야 한다. <span class="tag t-ver">검증</span> <span class="tag t-obs">실측</span></div>
+    <div><b>인용은 구조로, 구매 연결은 구매 조건으로 간다</b>인용과 구매 연결을 나눠 세니, 구조 점수 1위 풀무원 공식몰이 인용 1위(16회), 구매에 필요한 6개 구조를 모두 갖춘 컬리가 구매 연결 1위(9회)였다. 합쳐 세면 가려지던 분업이다. GEO 성과는 인용과 구매 연결을 나눠 측정해야 정확하다. <span class="tag t-obs">실측</span> <span class="tag t-est">추정</span></div>
+    <div><b>AI 유형마다 “답이 놓여야 할 자리”가 다르다</b>구매형 AI는 상단의 “항목: 값” 구매 조건 블록을, 쇼핑 비교형은 여러 상품을 같은 기준으로 나열한 정보를, 설명형은 이유를 설명하는 문단과 공식 교차 근거를 가져갔다. 한 페이지가 세 유형을 모두 만족시키려면 위에서 아래로 답 → 비교 → 설명 → 연결 순서로 쌓아야 한다. <span class="tag t-obs">실측</span></div>
+    <div><b>같은 사이트 안에서는 문장이 페이지를 고른다</b>질문 하나에 답하고, 질문에 쓰인 단어로 답하고, 같은 질문에는 페이지 하나만 두는 것. 감성 카피는 인용되지 않았고, 용량만 다른 유사 페이지는 인용을 나눠 가졌다. <span class="tag t-est">추정</span></div>
+    <div><b>한 AI의 결과로 GEO를 평가하면 안 된다</b>풀무원 공식몰 인용 답변 수는 Claude 0개에서 Liner 8개까지 벌어졌다. 엔진 조합에 따라 사이트 순위가 바뀌므로, 측정은 최소 3~4개 엔진과 반복 실행을 기본으로 한다. <span class="tag t-obs">실측</span></div>
+    <div><b>공식 채널 간 같은 말이 교차 근거가 된다</b>공식몰·뉴스룸·블로그가 같은 표현을 쓴 풀무원은 Liner에서 함께 인용됐고, 그런 채널이 없는 SSG에는 이 효과가 없었다. 제품명과 핵심 수치의 표현 통일은 비용이 낮은 레버다. <span class="tag t-obs">실측</span></div>
+    <div><b>주소 관리 실패는 인용을 엉뚱한 곳으로 보낸다</b>SSG에서는 AI가 인용한 오래된 상품 주소 2건이 다른 브랜드 상품으로 연결됐고, 확인 시점 품절 상품도 구매처로 인용됐다. 상품 교체·단종 시 주소 수명 관리가 곧 인용 관리다. <span class="tag t-obs">실측</span></div>
+  </div>
+  <div class="note key"><span class="h">남아 있는 불확실성</span>
+    <p>검색엔진과 AI는 페이지 선택 기준을 공개하지 않습니다. 이번 결론은 인용된 페이지들의 공통점에서 나온 해석이며, 구조를 바꾼 뒤 같은 질문으로 다시 측정해야 효과가 확정됩니다. 국내 AI 검색·쇼핑 서비스는 해외 서비스와 데이터 경로가 다를 수 있어 별도 관찰이 필요합니다.</p>
+  </div>
+</section>
+
+<!-- ===================== 5 ===================== -->
+<section class="sec" id="s5" data-title="Samsung UK 사이트 GEO 진단과 보완 과제">
+  <div class="sec-head"><div class="sec-no">5</div><div><h2>Samsung UK 공식 사이트 GEO 진단과 보완 과제</h2><p class="sub">사이트 전반의 페이지 유형을 AI 크롤러 관점으로 점검해 도출한 보완 과제</p></div></div>
+
+  <h3>5.1 점검 범위와 방법</h3>
+  <p>samsung.com/uk는 공통 템플릿 위에 페이지 유형별 모듈을 얹는 구조입니다. 그래서 페이지 유형별 대표 페이지를 골라, 자바스크립트를 실행하지 않은 HTML을 텍스트로 추출해 점검했습니다. AI 크롤러 대부분이 보는 상태와 같은 조건입니다. 상단 메뉴, 푸터, 팝업처럼 모든 페이지가 공유하는 요소에서 나온 결과는 사이트 전체에 해당합니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>페이지 유형</th><th>점검 대상</th><th>사이트 내 역할</th></tr></thead>
+    <tbody>
+      <tr><td><b>메인</b></td><td>samsung.com/uk</td><td>전체 진입점, 공통 템플릿 기준</td></tr>
+      <tr><td><b>카테고리 목록</b></td><td>All TVs</td><td>라인업 전체를 보여 주는 브라우즈 페이지</td></tr>
+      <tr><td><b>상품 상세</b></td><td>Micro RGB 최상위 모델 65형</td><td>가격·재고·리뷰·사양이 모이는 구매 페이지</td></tr>
+      <tr><td><b>구매 가이드</b></td><td>TV Buying Guide 허브</td><td>질문형 정보 콘텐츠의 허브</td></tr>
+      <tr><td><b>고객지원 문서</b></td><td>2026 Micro RGB 모델 비교 문서</td><td>질문형 제목의 비교·설명 문서</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">점검일 2026년 10월 30일(KST). 이 추출 방식으로는 &lt;head&gt; 안의 JSON-LD와 robots.txt를 확인할 수 없어 해당 항목은 “확인 필요”로 분리했습니다. 휴대폰·생활가전 상세페이지와 비교·추천 도구는 이번 범위에 포함하지 않았습니다.</p>
+
+  <h3>5.2 이미 잘 갖춘 기반</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>항목</th><th>현재 상태</th><th>GEO 관점의 의미</th></tr></thead>
+    <tbody>
+      <tr><td><b>전체 사양표</b> <span class="tag t-obs">실측</span></td><td>상품 상세의 사양 전체가 텍스트 표로 초기 HTML에 포함. 치수 mm, 무게 kg, 소비전력 W 등 단위가 명확</td><td>스펙 질의에 그대로 인용 가능한 형태. 풀무원 공식몰보다 앞선 부분</td></tr>
+      <tr><td><b>자기설명형 상품명</b> <span class="tag t-obs">실측</span></td><td>크기·시리즈·해상도·연식이 제목에 모두 포함(예: 65'' Micro RGB … 4K … (2026))</td><td>조건형 질의와 제목이 바로 맞물림. 연식 표기로 최신성 판단도 쉬움</td></tr>
+      <tr><td><b>제3자 근거</b> <span class="tag t-obs">실측</span></td><td>전문 매체 수상·리뷰 인용(Expert Reviews, Sound Advice 등)과 iF 디자인 어워드. VDE·UL·Pantone 인증을 각주로 명시</td><td>AI가 선호하는 earned 근거를 이미 보유</td></tr>
+      <tr><td><b>정량 리뷰 + AI 요약</b> <span class="tag t-obs">실측</span></td><td>평점 4.8(116건), 추천 93%, 항목별 평점, AI 리뷰 요약. 인센티브 리뷰 포함 여부도 고지</td><td>풀무원과 같은 “미리 요약해 둔 후기” 구조</td></tr>
+      <tr><td><b>구매 조건 텍스트</b> <span class="tag t-obs">실측</span></td><td>설치·수거·재활용, 14일 반품, 익일 배송 조건을 문장으로 제공</td><td>구매형 AI가 쓰는 배송·반품 정보가 글자로 있음</td></tr>
+      <tr><td><b>질문형 비교 문서</b> <span class="tag t-obs">실측</span></td><td>고객지원 문서가 질문형 제목, 업데이트 날짜, 즉답 문단, 모델별 HTML 비교표를 모두 갖춤</td><td>사이트 안에서 가장 GEO 친화적인 페이지. 다른 유형의 모범 사례로 쓸 수 있음</td></tr>
+      <tr><td><b>질문형 가이드 제목</b> <span class="tag t-obs">실측</span></td><td>Buying Guide 허브에 “What size TV should I get?”, “Mini LED vs. OLED” 같은 질문·비교형 기사 다수</td><td>사람들이 묻는 표현과 제목이 일치</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.3 영역별 보완 과제</h3>
+
+  <h4>A. 크롤링·렌더링: AI가 내용을 볼 수 있는가</h4>
+  <div class="tbl"><table>
+    <thead><tr><th>발견 사항</th><th>근거</th><th>영향</th><th>우선순위</th></tr></thead>
+    <tbody>
+      <tr><td><b>카테고리 상품 목록이 비어 있음</b> <span class="tag t-obs">실측</span></td><td>All TVs 페이지의 초기 HTML에 상품 카드가 없고 “Sorry, no results were found” 문구만 존재. 목록은 브라우저에서 뒤늦게 채워짐</td><td>“best Samsung TV”, “Samsung 65 inch TV” 같은 브라우즈형 질의에서 AI가 라인업을 볼 수 없음. 풀무원 메인·카테고리와 같은 약점</td><td class="hl">즉시</td></tr>
+      <tr><td><b>상세페이지 가격·혜택 영역의 템플릿 변수</b> <span class="tag t-obs">실측</span></td><td>가격, 정가, 할인액, 월 할부, 보증·트레이드인·설치 옵션 영역 다수가 <code>{{price.priceWrapper…}}</code> 형태로 남음</td><td>AI가 가격·혜택을 읽지 못하거나 변수 문자열을 그대로 가져갈 위험</td><td class="hl">즉시</td></tr>
+      <tr><td><b>JSON-LD·robots.txt 상태</b> <span class="tag t-sup">보완 필요</span></td><td>추출 방식상 미확인. 가이드 허브에 “FAQ Schema”라는 문자열이 노출돼 FAQ 스키마를 별도 코드로 넣은 흔적은 있음</td><td>Product·Offer 스키마의 가격이 화면 값과 일치하는지, AI 크롤러를 막고 있지 않은지 확정 필요</td><td>상</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>B. 구매처 단계: 기계가 읽는 상품 데이터가 정확한가</h4>
+  <div class="tbl"><table>
+    <thead><tr><th>발견 사항</th><th>근거</th><th>영향</th><th>우선순위</th></tr></thead>
+    <tbody>
+      <tr><td><b>한 페이지 안의 가격 값 상충</b> <span class="tag t-obs">실측</span></td><td>같은 상세페이지에 £3,299.00, “£2,399.00 save $ £400.00”, 할부 총액 “$2,579.96”, 월 “$107.50”이 함께 존재. 세 값이 서로 맞지 않고 파운드·달러 기호가 섞임</td><td>OpenAI·Google 모두 판매처 선정에 가격 데이터를 쓰므로, 값이 엇갈리면 공식몰이 판매처로 선택될 근거가 약해짐</td><td class="hl">즉시</td></tr>
+      <tr><td><b>재고 신호 상충</b> <span class="tag t-obs">실측</span></td><td>“No longer available”, “Out of Stock” 문구와 “Arrives tomorrow, if you order by 7pm”이 동시에 초기 HTML에 존재</td><td>AI가 품절로 판단하면 구매처 후보에서 제외될 수 있음</td><td class="hl">즉시</td></tr>
+      <tr><td><b>상품 메타 정보 미설정</b> <span class="tag t-obs">실측</span></td><td>메인·카테고리·상세 모두 <code>og:type=website</code>, <code>og:image</code>는 공통 로고 이미지. 상세페이지에도 상품 유형·가격·대표 이미지 메타가 없음</td><td>풀무원 공식몰이 갖춘 “이건 상품, 가격은 얼마” 신호가 없음</td><td>상</td></tr>
+      <tr><td><b>종료된 프로모션 문구 잔존</b> <span class="tag t-obs">실측</span></td><td>점검일(10.30) 기준 이미 끝난 캐시백(09.23~10.27), 사은품(09.02~09.22), 또 다른 캐시백(06.16까지) 조건이 상세페이지에 노출</td><td>AI가 종료된 혜택을 현재 혜택으로 안내할 위험. 브랜드 신뢰 문제로 이어질 수 있음</td><td>상</td></tr>
+      <tr><td><b>피드 경로 미확인</b> <span class="tag t-sup">보완 필요</span></td><td>Merchant Center 피드, OpenAI 직접 피드 등록 여부는 외부에서 확인 불가</td><td>OpenAI는 판매처 순위 요인에 “제조사·주 판매자 여부”를 포함하므로, 피드가 연결되면 공식몰이 구조적으로 유리</td><td>상</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>C. 콘텐츠 정확성: AI가 읽는 텍스트에 잡음이 없는가</h4>
+  <div class="tbl"><table>
+    <thead><tr><th>발견 사항</th><th>근거</th><th>영향</th><th>우선순위</th></tr></thead>
+    <tbody>
+      <tr><td><b>다른 국가 템플릿 잔존</b> <span class="tag t-obs">실측</span></td><td>UK 상세페이지 HTML에 독일 통신사 요금제 약관(독일어), 독일어 보험 동의 문구, 스웨덴 크로나 할부 예시, 인도 사이트 경로의 설치 약관 링크가 포함</td><td>AI가 다른 국가 조건을 UK 조건으로 섞어 답할 위험. 언어 판별도 흐려짐</td><td class="hl">즉시</td></tr>
+      <tr><td><b>대체 텍스트 플레이스홀더</b> <span class="tag t-obs">실측</span></td><td>메인·카테고리·상세 공통으로 “[D] Alternative Text”, “alt text”, “alternative text”가 반복</td><td>이미지 정보가 의미 없는 문자열로 읽힘. 공통 템플릿이라 사이트 전체에 해당</td><td>상</td></tr>
+      <tr><td><b>타 국가·타 크기 리뷰 혼재</b> <span class="tag t-obs">실측</span></td><td>UK 65형 페이지 리뷰 목록에 루마니아어·프랑스어 리뷰, 미국 리뷰(달러 가격·미국 고객센터 번호 포함), 75·85형 언급 리뷰가 섞여 있음. 원 출처 국가 표시는 있음</td><td>AI가 리뷰 속 가격·조건을 UK 정보로 오인할 수 있음. 평점 집계 범위도 불명확</td><td>중</td></tr>
+      <tr><td><b>개발 메모 노출</b> <span class="tag t-obs">실측</span></td><td>Buying Guide 허브에 “Code to make Margins go away”, “Code to overwrite AEM style, add FAQs section…” 같은 문자열이 본문 텍스트로 노출</td><td>본문 품질 신호 저하. 운영 품질 문제로 보일 수 있음</td><td>중</td></tr>
+      <tr><td><b>오래된 정보 신호</b> <span class="tag t-obs">실측</span></td><td>가이드 허브의 대표 이미지 파일명이 2020년판, “2024 Samsung AI TVs have arrived” 영상, 단종 라인 언급. 요약 문장은 120Hz·OLED/QLED 기준이라 최신 라인업(Micro RGB, 165Hz)이 빠짐. Price Promise 링크는 2021년 도메인</td><td>AI가 오래된 기준으로 답변을 구성할 수 있음. 최신성 신호 약화</td><td>중</td></tr>
+      <tr><td><b>제목과 본문 제목 불일치</b> <span class="tag t-obs">실측</span></td><td>All TVs 페이지의 title은 “Smart AI TVs | Browse Full Samsung TV Range”인데 본문 H1은 “Explore TVs by Size”</td><td>페이지 주제 판단이 흐려짐</td><td>하</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>D. 정보 구조: 질문에 맞는 페이지로 이어지는가</h4>
+  <div class="tbl"><table>
+    <thead><tr><th>발견 사항</th><th>근거</th><th>영향</th><th>우선순위</th></tr></thead>
+    <tbody>
+      <tr><td><b>가장 좋은 비교 문서가 고객지원에 고립</b> <span class="tag t-obs">실측</span></td><td>모델 비교표와 즉답 문단을 갖춘 문서가 /support/ 경로에 있고, 확인한 범위에서는 상세페이지 하단 “Solutions &amp; Tips”에서만 연결됨. Buying Guide 허브·카테고리에서는 연결이 보이지 않음</td><td>설명형 AI가 인용하기 좋은 문서가 검색·링크 구조상 묻혀 있음</td><td>상</td></tr>
+      <tr><td><b>구매 가이드 주소 체계 분산</b> <span class="tag t-obs">실측</span></td><td>가이드 주소가 /tvs/tv-buying-guide/, /home-appliances/buying-guide/, /home-appliances/learn/, /mobile-phone-buying-guide/, /laptop-buying-guide/, /monitors/monitor-buying-guide/로 제각각</td><td>가이드 묶음의 일관성 약화, 관리·확장 비용 증가</td><td>중</td></tr>
+      <tr><td><b>같은 카드의 반복 노출</b> <span class="tag t-obs">실측</span></td><td>가이드 허브의 탭 구조 때문에 같은 기사 카드가 코드에 여러 번(최대 6회) 반복</td><td>본문 텍스트가 중복으로 부풀어 핵심 문장이 묻힘</td><td>중</td></tr>
+      <tr><td><b>얕은 분류 경로</b> <span class="tag t-obs">실측</span></td><td>상세페이지 분류 경로가 홈 › TV › 상품으로, Micro RGB 같은 시리즈 단계가 없음</td><td>AI가 시리즈 내 위치를 파악하기 어려움</td><td>하</td></tr>
+      <tr><td><b>근거가 페이지 하단에 집중</b> <span class="tag t-obs">실측</span></td><td>VDE·UL 인증 등 주장의 근거가 기능 설명 옆이 아니라 하단 각주 번호로만 연결</td><td>섹션 하나만 잘라 읽을 때 근거가 함께 전달되지 않음</td><td>하</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.4 직관적으로: 기계가 지금 읽는 값 vs 읽어야 할 값</h3>
+  <p>거래형 프롬프트(2부 2.2)에서 AI가 공식몰을 구매 링크로 붙이려면, 상세페이지의 상품 데이터가 또렷해야 합니다. AI가 실제로 긁어 가는 것은 사람이 보는 화면이 아니라 자바스크립트 실행 전 HTML의 글자입니다. 같은 Samsung UK 상세페이지를 그 관점에서 나란히 놓으면 과제가 분명해집니다.</p>
+  <div class="flow">
+    <div class="layer"><b>지금 읽히는 값</b><small>JS 실행 전 HTML — AI가 보는 것</small>
+      <ul>
+        <li>가격: <code>{{price.priceWrapper…}}</code> (변수 문자열)</li>
+        <li>통화: £3,299 · £2,399 · $2,579.96 혼재</li>
+        <li>재고: “품절”과 “내일 도착”이 동시에</li>
+        <li>상품 유형: og:type=website (상품 아님)</li>
+        <li>혜택: 이미 끝난 캐시백 문구</li>
+      </ul></div>
+    <div class="arr" aria-hidden="true">›</div>
+    <div class="layer"><b>읽혀야 할 값</b><small>구매처 단계가 요구하는 데이터</small>
+      <ul>
+        <li>가격: £2,399 (실제 숫자, 화면 값과 일치)</li>
+        <li>통화: £ 단일</li>
+        <li>재고: InStock 또는 품절 중 하나</li>
+        <li>상품 유형: og:type=product + Offer 스키마</li>
+        <li>혜택: 현재 유효한 조건만</li>
+      </ul></div>
+  </div>
+  <p>왼쪽 상태에서는 AI가 “이 제품을 얼마에, 지금 살 수 있는지”를 확신하지 못해 값이 또렷한 유통몰을 구매처로 붙입니다. 왼쪽을 오른쪽으로 바꾸는 것이 공식몰을 구매 링크로 끌어오기 위한 최소 조건입니다.</p>
+
+  <h3>5.5 우선순위 로드맵</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>단계</th><th>과제</th><th>기대 효과</th></tr></thead>
+    <tbody>
+      <tr><td><b>즉시</b></td><td>상세페이지 가격·재고를 초기 HTML에 실제 값으로 출력하고 통화 기호를 £로 통일. 다른 국가 템플릿 모듈 제거. 카테고리 목록을 서버 렌더로 전환하거나 상품명·가격·링크가 담긴 정적 목록 추가</td><td>AI가 공식몰의 가격·재고·라인업을 읽을 수 있게 됨. 구매처 단계의 최소 조건 확보</td></tr>
+      <tr><td><b>단기</b></td><td>상품 메타(og:type=product, 가격, 대표 이미지)와 Product·Offer 스키마를 화면 값과 일치시키기. 종료 프로모션 자동 내림 운영 규칙 마련. 대체 텍스트 플레이스홀더 일괄 정리. robots.txt와 쇼핑 피드 경로 점검</td><td>구매처 단계 데이터 정합성 확보, 피드 연결 시 제조사 이점 활용</td></tr>
+      <tr><td><b>중기</b></td><td>고객지원 비교 문서 형식을 Buying Guide·카테고리에 확산하고 상호 링크. 가이드 요약 문장을 최신 라인업 기준으로 갱신. 인증 근거를 기능 설명 옆으로 이동. 가이드 주소 체계 정리. UK 리뷰와 타 국가 리뷰 구분 표시</td><td>설명형 AI의 인용 확률 상승, 최신성 신호 강화</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.6 측정 체계</h3>
+  <ul class="dots">
+    <li><strong>질의 세트 3종:</strong> 브랜드 미포함 질의(“best TV for a bright living room”), 브랜드 지정 질의(“Samsung Micro RGB vs OLED”), 구매 조건 질의(“65 inch TV with free installation delivered this week”)</li>
+    <li><strong>기록 방식:</strong> 답변마다 추천 브랜드, 근거 출처, 구매 링크를 분리 기록하고 인용 URL을 공식 / 유통 / 언론·리뷰 / 커뮤니티로 분류. AI 답변 속 가격·혜택 오류 건수도 함께 기록</li>
+    <li><strong>반복과 범위:</strong> 엔진별 2~3회 반복, 국가·언어별 별도 측정, 즉시 과제 반영 전·후 비교</li>
+  </ul>
+  <div class="note sup"><span class="h"><span class="tag t-sup">보완 필요</span>점검 범위 확장</span>
+    <p>이번 점검은 페이지 유형별 대표 페이지 5종 기준입니다. 공통 템플릿 요소에서 나온 결과는 사이트 전체에 해당하지만, 휴대폰·생활가전 상세페이지, Help me choose·Compare 같은 도구 페이지, 그리고 JSON-LD·robots.txt 상태는 view-source나 서치콘솔의 크롤링된 HTML로 추가 확인이 필요합니다. Samsung 페이지가 실제로 어느 AI에서 어떻게 인용되는지도 아직 측정되지 않았습니다.</p>
+  </div>
+  <div class="note"><span class="h">내부 공유 범위</span>
+    <p>이 장은 클라이언트 공개 페이지의 결함을 정리한 내부 관찰입니다. 외부 공유 문서에서는 모델 코드명 대신 시리즈·등급명으로 표기하고, 결함 항목은 수정 여부를 확인한 뒤 사용하는 것을 권장합니다.</p>
+  </div>
+</section>
+
+<!-- ===================== A ===================== -->
+<section class="sec" id="s6" data-title="보완·추가 항목 일람">
+  <div class="sec-head"><div class="sec-no">A</div><div><h2>보완·추가 항목 일람</h2><p class="sub">이번 정리에서 새로 표시한 항목을 한곳에 모았습니다</p></div></div>
+  <div class="tbl"><table>
+    <thead><tr><th>구분</th><th>항목</th><th>필요한 조치</th><th>위치</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>풀무원 GEO 성과(방문 2.3배·구매 7.4배)의 해석 범위</td><td>“회사 발표 기준” 명시, AI 경유 유입 비중 확인</td><td>1.1</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>풀무원 공식몰 JSON-LD·llms.txt 실제 상태</td><td>내부 리포트 원문 확보 또는 view-source로 직접 확인</td><td>1.4</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>공식몰 상품의 쇼핑 피드 연결 여부</td><td>Merchant Center·가격 비교 피드 등록 여부 확인</td><td>2.3</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>근거 출처와 구매 링크 합산 집계</td><td>추천 브랜드·근거 출처·구매 링크 3칸 분리 기록</td><td>2.4</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>한국 식품 카테고리의 earned 편향 미재현</td><td>엔진별 2~3회 반복, 랭킹형 질문 추가 재측정</td><td>3.6</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>브랜드 지정 질의 미측정</td><td>“풀무원 두부 어때” 등 브랜드 지정 질의 추가</td><td>3.6</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>쿠팡·Gemini·국내 AI 검색 서비스 미포함</td><td>수동 확인 또는 대체 수집 경로 마련, 국내 서비스 별도 관찰</td><td>3.1</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>Samsung UK JSON-LD·robots.txt·쇼핑 피드 연결 상태</td><td>view-source, 서치콘솔 크롤링된 HTML, Merchant Center로 확인</td><td>5.3</td></tr>
+      <tr><td><span class="tag t-sup">보완 필요</span></td><td>Samsung UK 점검 범위(대표 페이지 5종), AI 인용 실측 부재</td><td>휴대폰·가전 상세, 도구 페이지 추가 점검. TV 질의 세트로 엔진별 실측</td><td>5.5</td></tr>
+      <tr><td><span class="tag t-add">추가 제안</span></td><td>OpenAI 판매처 순위 요인 중 “제조사·주 판매자 여부”</td><td>공식몰 피드 경로 확보 시 구조적 이점으로 활용, 10.21 “역전 어려움” 판단 재검토</td><td>2.2</td></tr>
+      <tr><td><span class="tag t-add">추가 제안</span></td><td>AI 유형별 상태 진단(추천·구매처 4분면을 엔진별로)</td><td>성과 보고 시 엔진별로 다른 상태를 분리 표기</td><td>2.4</td></tr>
+      <tr><td><span class="tag t-add">추가 제안</span></td><td>해외 연구와 실측의 일치·불일치 대조</td><td>Perplexity 공식몰 선호는 연구와 일치, Claude 결과는 불일치로 기록</td><td>3.6</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ===================== B ===================== -->
+<section class="sec" id="s7" data-title="검증 결과와 출처">
+  <div class="sec-head"><div class="sec-no">B</div><div><h2>검증 결과와 출처</h2><p class="sub">원 문서 대비 제외·정정한 내용과 확인한 출처</p></div></div>
+
+  <h3>B.1 본문에서 제외하거나 정정한 내용</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>구분</th><th>원 문서의 주장</th><th>사유</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag t-fix">제외</span></td><td>10.21: 질문 유형별 “AI가 주로 고르는 페이지” 예측표(예: “알고 싶다 → 샵풀무원 상세”)</td><td>실측 전 가설. 10.26 실측에서 같은 질문 유형도 AI 답변 유형에 따라 다른 사이트를 인용해 그대로 쓸 수 없음</td></tr>
+      <tr><td><span class="tag t-fix">제외</span></td><td>10.21: “실시간 검색 AI는 최신 쇼핑 페이지, 검색 안 하는 AI는 공식·브랜드를 고른다”</td><td>실측에서 상시 검색형 Perplexity가 풀무원 공식몰을 가장 많이 인용해 반대 결과</td></tr>
+      <tr><td><span class="tag t-fix">정정</span></td><td>10.21: 토론토대 연구의 가전 브랜드 비중 “약 18~22%”, “미국·영어 기준”, “ChatGPT·Claude·Gemini·Perplexity에 질의”</td><td>원문 확인 결과 해당 실험은 ChatGPT(검색)와 Google 비교, 대상은 미국·캐나다. 가전 earned는 미국 92.1%·캐나다 77.6%(브랜드 22.1%)로 미국 브랜드 비중은 약 8% 수준</td></tr>
+      <tr><td><span class="tag t-fix">정정</span></td><td>10.21: arXiv 2509.08919를 “패러프레이즈 실험 논문”과 “토론토대 earned 연구”로 나눠 기재</td><td>동일 논문 안의 서로 다른 실험</td></tr>
+      <tr><td><span class="tag t-fix">정정</span></td><td>10.21: “말만 바꿔도 고르는 페이지가 달라진다(확실함)”</td><td>원문은 AI가 표현 변경에 Google보다 안정적이고, 언어 변경보다 영향이 작다고 보고. 본문 3.6에 원문 기준으로 기술</td></tr>
+      <tr><td><span class="tag t-fix">갱신</span></td><td>10.26 실측: 인용과 구매 링크를 합산 집계(컬리 인용 18회 1위 등)</td><td>10.30 전달된 분리 집계판으로 교체. 인용 1위는 풀무원 공식몰(16회), 구매 연결 1위는 컬리(9회). 2.1·3장·4장 수치를 분리판 기준으로 갱신(본문 2.4·3.5)</td></tr>
+      <tr><td><span class="tag t-fix">정정</span></td><td>10.26 해설: “추천은 풀무원, 링크는 쿠팡”</td><td>실측상 구매형 AI의 대표 링크는 컬리·SSG, 쿠팡은 공동 3위. “유통몰”로 통칭</td></tr>
+      <tr><td><span class="tag t-ver">검증</span></td><td>10.26 해설: 내부 두부 리포트 기반 풀무원 JSON-LD 상태, llms.txt 효과</td><td>615 전체 소스로 확인 — Product·Offer·AggregateRating·Review JSON-LD가 초기 HTML에 탑재됨(가격 필드 포함). 다만 영양 ‘총량’값 0, offers.url≠canonical 등 데이터 결함 존재(1.5). llms.txt는 공개 분석으로 ‘인용 효과 근거 없음’을 확인해 본문에 반영</td></tr>
+      <tr><td><span class="tag t-fix">제외</span></td><td>10.26: 공식몰 화면 폭 1280px 고정이 모바일 평가·GEO에 불리</td><td>AI 크롤러는 CSS 화면이 아니라 HTML 텍스트를 읽어 화면 폭이 추출 텍스트를 바꾸지 않음. 반응형은 전통 SEO 사용성 요소라 GEO 과제에서 제외(본문 1.4 정정)</td></tr>
+      <tr><td><span class="tag t-fix">재해석</span></td><td>10.26: og:type=website/상품 스키마 누락을 텍스트 인용 약점으로 기재</td><td>상품 메타·스키마는 주로 2부의 ‘구매처 단계’(쇼핑 피드·리치결과)에 작동. 텍스트 인용에는 보조적이라는 단서를 붙여 재배치(1.2·2부)</td></tr>
+      <tr><td><span class="tag t-est">보류</span></td><td>10.21: 서버 렌더 페이지 AI 인용률 65~75% vs 클라이언트 렌더 25~35%</td><td>“AI 크롤러가 대체로 JS를 실행하지 않는다”는 원칙은 여러 1차·업계 분석(Vercel의 GPTBot 5억+ 페치 분석 등)으로 재확인. 단 65~75 대 25~35이라는 특정 수치는 단일 업계 블로그 추정치라 보류</td></tr>
+      <tr><td><span class="tag t-est">보류</span></td><td>10.21: 2026년 일부 OpenAI 봇의 JS 렌더 시작, AI 엔진 간 출처 16~59% 겹침(BrightEdge 보도), 질문 의도별 매칭 방식(AirOps), 45편 종합 리뷰·FeatGEO 수치</td><td>이번 검토에서 1차 출처를 확인하지 못했거나 공식 확인이 없는 2차 보도</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">llms.txt는 주요 AI 플랫폼이 인용 결정에 사용한다는 공식 확인이 없어, 비용은 낮지만 인용을 보장하는 장치로 기대하지 않는다는 원 문서의 판단을 유지했습니다.</p>
+
+  <h3>B.2 확인한 출처</h3>
+  <ul class="src">
+    <li><b>Chen, Wang, Chen, Koudas (2025). Generative Engine Optimization: How to Dominate AI Search. University of Toronto</b><a href="https://arxiv.org/abs/2509.08919">arxiv.org/abs/2509.08919</a> · 가전·자동차 출처 유형 분포, 질의 의도별 차이, 표현·언어 민감도</li>
+    <li><b>Aggarwal 외 (2024). GEO: Generative Engine Optimization. KDD 2024</b><a href="https://arxiv.org/abs/2311.09735">arxiv.org/abs/2311.09735</a> · 최적화 전략별 가시성 향상(최대 40%)</li>
+    <li><b>OpenAI 도움말. Shopping with ChatGPT Search</b><a href="https://help.openai.com/en/articles/11128490">help.openai.com/en/articles/11128490</a> · 판매처 목록 생성 방식, 판매처 순위 요인, 직접 피드 신청</li>
+    <li><b>Google AI Mode 쇼핑 발표 및 보도 (2025.05)</b><a href="https://www.axios.com/2025/05/20/google-ai-shopping-features-virtual-try-on-clothes">axios.com</a> · <a href="https://www.channable.com/blog/google-shopping-ai-mode">channable.com</a> · Shopping Graph 규모와 갱신 주기</li>
+    <li><b>AI 크롤러 JS 렌더링 (SSR vs CSR)</b><a href="https://vercel.com/i/how-ai-is-changing-seo">vercel.com</a> · <a href="https://www.getpassionfruit.com/blog/javascript-rendering-and-ai-crawlers-can-llms-read-your-spa">getpassionfruit.com</a> · GPTBot·ClaudeBot·PerplexityBot이 JS를 실행하지 않아 CSR 콘텐츠를 보지 못함(GPTBot 5억+ 페치 분석). 서버 렌더가 인용의 전제</li>
+    <li><b>llms.txt · 스키마와 AI 인용 (2026)</b><a href="https://ecosire.com/blog/ai-search-optimization-business-guide">ecosire.com</a> · <a href="https://ecorpit.com/structured-data-json-ld-ai-search-citations-2026/">ecorpit.com</a> · <a href="https://pixis.ai/blog/does-llms-txt-help-ai-citations-what-the-evidence-actually-shows/">pixis.ai</a> · 구글이 llms.txt를 쓰지 않음을 명시, 크롤러 요청 0.1% 안팎, 30만 도메인 분석상 인용 상관 없음. 구글 검색 센트럴(2026.7): 구조화 데이터는 생성형 AI 검색에 필수 아님 — 스키마는 리치 결과·구매처 데이터용</li>
+    <li><b>Search Atlas. Comparative Analysis of LLM Citation Behavior</b><a href="https://searchatlas.com/blog/comparative-analysis-of-llm-citation-behavior/">searchatlas.com</a> · 응답 550만 건 분석, 브랜드 지정 질의의 단일 인용 경향</li>
+    <li><b>파이낸셜뉴스 (2026.09.22). 풀무원 공식몰 GEO 적용 성과</b><a href="https://www.fnnews.com/news/202609221438107009">fnnews.com</a> · 방문자 2.3배, 구매 건수 7.4배(전후 4개월 비교)</li>
+    <li><b>샵풀무원 615 전체 소스 (2026.10.30 확인)</b><a href="https://shop.pulmuone.co.kr/shop/goodsView/615">shop.pulmuone.co.kr/shop/goodsView/615</a> · Nuxt SSR, Product·Offer·AggregateRating·Review JSON-LD 탑재 확인(영양 총량값 0 등 데이터 결함 포함)</li>
+    <li><b>내부 자료 (더프롬 기획팀)</b>풀무원 GEO 전체 정리(2026.10.21), 두부 GEO 실측 스터디와 수집 CSV 4건(ChatGPT·Perplexity·Claude 2026.10.26, Liner 2026.10.27), AI 답변 2층 구조 해설(2026.10.26), 두부 GEO 분리 집계판(인용·구매 연결 분리, 2026.10.30), Samsung UK 공개 페이지 점검(2026.10.26)</li>
+    <li><b>Samsung UK 공식 사이트 점검 (2026.10.30, KST)</b><a href="https://www.samsung.com/uk/">samsung.com/uk</a> · <a href="https://www.samsung.com/uk/tvs/all-tvs/">All TVs</a> · <a href="https://www.samsung.com/uk/tvs/tv-buying-guide/">TV Buying Guide</a> · <a href="https://www.samsung.com/uk/support/tv-audio-video/what-are-the-differences-between-the-2026-micro-rgb-tv-models/">Micro RGB 모델 비교 문서</a> · Micro RGB 최상위 모델 상세페이지</li>
+  </ul>
+  <p class="cap">모든 시각은 KST 기준입니다. AI 답변은 엔진·시점·지역에 따라 달라질 수 있으므로, 적용 전에는 대상 서비스와 시장에서 직접 관찰한 결과로 다시 확인하십시오.</p>
+</section>
+
+    </div><!-- /wrap -->
+  </div><!-- /panel -->
+  </main>
+</div>
+
+<div class="now-bar" role="region" aria-label="읽기 진행">
+  <span class="play" aria-hidden="true"></span>
+  <div class="ti"><span id="nowTitle">핵심 요약</span><small>AI 검색 인용 구조와 공식몰 GEO 설계 방향</small></div>
+  <div class="prog" aria-hidden="true"><i id="progBar"></i></div>
+  <button class="top-btn" type="button" id="toTop">맨 위로</button>
+</div>
+
+<script>
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('section.sec'));
+  var links=[].slice.call(document.querySelectorAll('.toc a, .mnav a'));
+  var title=document.getElementById('nowTitle');
+  var bar=document.getElementById('progBar');
+  function setActive(id){
+    links.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+id)});
+    var s=document.getElementById(id); if(s&&title) title.textContent=s.getAttribute('data-title');
+    var m=document.querySelector('.mnav a.on'); if(m&&m.scrollIntoView&&window.innerWidth<=896){m.scrollIntoView({block:'nearest',inline:'center'})}
+  }
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting) setActive(e.target.id)});
+    },{rootMargin:'-30% 0px -60% 0px'});
+    secs.forEach(function(s){io.observe(s)});
+  }
+  function prog(){
+    var h=document.documentElement; var max=h.scrollHeight-h.clientHeight;
+    if(bar) bar.style.width=(max>0?Math.min(100,h.scrollTop/max*100):0)+'%';
+  }
+  window.addEventListener('scroll',prog,{passive:true}); prog();
+  document.getElementById('toTop').addEventListener('click',function(){window.scrollTo({top:0})});
+  setActive('summary');
+})();
+</script>
+</body>
+</html>
